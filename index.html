@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบนิเทศภายในโรงเรียนบูกิตประชาอุปถัมภ์</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+</head>
+<body>
+
+<div id="app">
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="school-logo">
+        <span class="material-icons-round">school</span>
+      </div>
+      <h2>ระบบนิเทศฯ</h2>
+      <p class="school-name">โรงเรียนบูกิตประชาอุปถัมภ์</p>
+    </div>
+    <ul class="nav-menu">
+      <li class="nav-item active" data-page="dashboard">
+        <span class="material-icons-round">dashboard</span><span>แดชบอร์ด</span>
+      </li>
+      <li class="nav-item" data-page="booking">
+        <span class="material-icons-round">event_available</span><span>จองวันนิเทศ</span>
+      </li>
+      <li class="nav-item" data-page="files">
+        <span class="material-icons-round">upload_file</span><span>ส่งไฟล์งาน</span>
+      </li>
+      <li class="nav-item" data-page="supervision">
+        <span class="material-icons-round">rate_review</span><span>ประเมินผล</span>
+      </li>
+      <li class="nav-item admin-only" data-page="admin" style="display:none;">
+        <span class="material-icons-round">admin_panel_settings</span><span>จัดการระบบ</span>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="loginBtn" class="btn-login" onclick="showLoginModal()">
+        <span class="material-icons-round">login</span> เข้าสู่ระบบผู้ดูแล
+      </button>
+      <div id="userBadge" class="user-badge" style="display:none;">
+        <span class="material-icons-round">verified_user</span>
+        <span>ผู้ดูแลระบบ</span>
+        <button onclick="logout()" class="btn-logout" title="ออกจากระบบ">x</button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="mainContent">
+    <header id="topbar">
+      <button id="menuToggle" onclick="toggleSidebar()">
+        <span class="material-icons-round">menu</span>
+      </button>
+      <h1 id="pageTitle">แดชบอร์ด</h1>
+      <div class="topbar-right">
+        <span id="currentDate" class="date-display"></span>
+      </div>
+    </header>
+
+    <div id="pageContent">
+
+      <section id="page-dashboard" class="page active">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="dashboard-grid">
+          <div class="card calendar-card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">calendar_month</span> ปฏิทินการนิเทศ</h3>
+              <div class="calendar-nav">
+                <button onclick="changeMonth(-1)" class="cal-nav-btn"><span class="material-icons-round">chevron_left</span></button>
+                <span id="calendarMonth"></span>
+                <button onclick="changeMonth(1)" class="cal-nav-btn"><span class="material-icons-round">chevron_right</span></button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="calendarContainer"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">history</span> การจองล่าสุด</h3>
+            </div>
+            <div class="card-body">
+              <div id="recentBookingsTable"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">description</span> สถานะส่งงานล่าสุด</h3>
+            </div>
+            <div class="card-body">
+              <div id="recentFilesTable"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-booking" class="page">
+        <div class="page-header">
+          <h2>จองวันนิเทศ</h2>
+        </div>
+        <div class="form-container">
+          <form id="bookingForm" onsubmit="submitBooking(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>วันที่นิเทศ <span class="required">*</span></label>
+                <input type="date" id="bookDate" required min="">
+              </div>
+              <div class="form-group">
+                <label>ช่วงเวลา <span class="required">*</span></label>
+                <select id="bookTime" required>
+                  <option value="">-- เลือกช่วงเวลา --</option>
+                  <option value="เช้า (08:30-12:00)">เช้า (08:30-12:00)</option>
+                  <option value="บ่าย (12:30-16:00)">บ่าย (12:30-16:00)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>คาบที่ <span class="required">*</span></label>
+                <select id="bookPeriod" required>
+                  <option value="">-- เลือกคาบ --</option>
+                  <option value="1">คาบที่ 1 (08:30-09:10)</option>
+                  <option value="2">คาบที่ 2 (09:10-09:50)</option>
+                  <option value="3">คาบที่ 3 (10:00-10:40)</option>
+                  <option value="4">คาบที่ 4 (10:40-11:20)</option>
+                  <option value="5">คาบที่ 5 (11:20-12:00)</option>
+                  <option value="6">คาบที่ 6 (12:30-13:10)</option>
+                  <option value="7">คาบที่ 7 (13:10-13:50)</option>
+                  <option value="8">คาบที่ 8 (13:50-14:30)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>ชื่อ-นามสกุล <span class="required">*</span></label>
+                <input type="text" id="bookTeacher" placeholder="กรอกชื่อ-นามสกุล" required>
+              </div>
+              <div class="form-group">
+                <label>กลุ่มสาระการเรียนรู้ <span class="required">*</span></label>
+                <select id="bookDepartment" required>
+                  <option value="">-- เลือกกลุ่มสาระ --</option>
+                  <option value="ภาษาไทย">ภาษาไทย</option>
+                  <option value="คณิตศาสตร์">คณิตศาสตร์</option>
+                  <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
+                  <option value="สังคมศึกษา">สังคมศึกษา</option>
+                  <option value="สุขศึกษา">สุขศึกษา</option>
+                  <option value="ศิลปะ">ศิลปะ</option>
+                  <option value="การงานอาชีพ">การงานอาชีพ</option>
+                  <option value="ภาษาต่างประเทศ">ภาษาต่างประเทศ</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>ชื่อวิชา <span class="required">*</span></label>
+                <input type="text" id="bookSubject" placeholder="กรอกชื่อวิชา" required>
+              </div>
+              <div class="form-group">
+                <label>รหัสวิชา</label>
+                <input type="text" id="bookSubjectCode" placeholder="กรอกรหัสวิชา">
+              </div>
+              <div class="form-group">
+                <label>ระดับชั้น <span class="required">*</span></label>
+                <select id="bookClassLevel" required>
+                  <option value="">-- เลือกระดับชั้น --</option>
+                  <option value="ป.1">ป.1</option>
+                  <option value="ป.2">ป.2</option>
+                  <option value="ป.3">ป.3</option>
+                  <option value="ป.4">ป.4</option>
+                  <option value="ป.5">ป.5</option>
+                  <option value="ป.6">ป.6</option>
+                  <option value="ม.1">ม.1</option>
+                  <option value="ม.2">ม.2</option>
+                  <option value="ม.3">ม.3</option>
+                  <option value="ม.4">ม.4</option>
+                  <option value="ม.5">ม.5</option>
+                  <option value="ม.6">ม.6</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>ห้องเรียน <span class="required">*</span></label>
+                <input type="text" id="bookRoom" placeholder="เช่น ป.4/1" required>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <span class="material-icons-round">event_available</span> จองวันนิเทศ
+              </button>
+              <button type="reset" class="btn btn-secondary">
+                <span class="material-icons-round">refresh</span> ล้างข้อมูล
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:2rem;">
+          <div class="card-header">
+            <h3><span class="material-icons-round">list</span> รายการจองของฉัน</h3>
+            <div class="filter-group">
+              <select id="myBookingFilter" onchange="loadMyBookings()">
+                <option value="">ทุกสถานะ</option>
+                <option value="รอดำเนินการ">รอดำเนินการ</option>
+                <option value="ยืนยันแล้ว">ยืนยันแล้ว</option>
+                <option value="นิเทศแล้ว">นิเทศแล้ว</option>
+                <option value="ปฏิเสธ">ปฏิเสธ</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="myBookingsTable"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-files" class="page">
+        <div class="page-header">
+          <h2>ส่งไฟล์งาน</h2>
+        </div>
+        <div class="form-container">
+          <form id="fileForm" onsubmit="submitFile(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>ชื่อ-นามสกุล <span class="required">*</span></label>
+                <input type="text" id="fileTeacher" placeholder="กรอกชื่อ-นามสกุล" required>
+              </div>
+              <div class="form-group">
+                <label>ประเภทไฟล์ <span class="required">*</span></label>
+                <select id="fileType" required onchange="updateFileHint()">
+                  <option value="">-- เลือกประเภท --</option>
+                  <option value="แผนการสอน">แผนการสอน (PDF/Word)</option>
+                  <option value="สื่อการสอน">สื่อการสอน (รูปภาพ/PPT/PDF)</option>
+                  <option value="ภาพกิจกรรม">ภาพกิจกรรม (รูปภาพ)</option>
+                  <option value="คลิปวิดีโอ">คลิปวิดีโอ (ลิงก์ YouTube/Drive)</option>
+                </select>
+              </div>
+              <div class="form-group" id="fileUploadGroup" style="display:none;">
+                <label>อัพโหลดไฟล์ <span class="required">*</span></label>
+                <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif">
+                <small id="fileHint" class="hint-text"></small>
+              </div>
+              <div class="form-group" id="fileLinkGroup" style="display:none;">
+                <label>ลิงก์ไฟล์ <span class="required">*</span></label>
+                <input type="url" id="fileLink" placeholder="https://youtube.com/... หรือ https://drive.google.com/...">
+              </div>
+              <div class="form-group full-width">
+                <label>ชื่อไฟล์/รายละเอียด</label>
+                <input type="text" id="fileName" placeholder="กรอกชื่อไฟล์หรือรายละเอียด">
+              </div>
+            </div>
+            <div id="filePreview" class="file-preview" style="display:none;"></div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <span class="material-icons-round">upload_file</span> ส่งไฟล์งาน
+              </button>
+              <button type="reset" class="btn btn-secondary" onclick="resetFileForm()">
+                <span class="material-icons-round">refresh</span> ล้างข้อมูล
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:2rem;">
+          <div class="card-header">
+            <h3><span class="material-icons-round">folder_open</span> ไฟล์งานของฉัน</h3>
+            <div class="filter-group">
+              <select id="myFileFilter" onchange="loadMyFiles()">
+                <option value="">ทุกสถานะ</option>
+                <option value="รอตรวจสอบ">รอตรวจสอบ</option>
+                <option value="ผ่าน">ผ่าน</option>
+                <option value="ปรับปรุง">ปรับปรุง</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="myFilesTable"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-supervision" class="page">
+        <div class="page-header">
+          <h2>ประเมินผลการนิเทศ</h2>
+        </div>
+        <div class="form-container">
+          <form id="supervisionForm" onsubmit="submitSupervision(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>ชื่อ-นามสกุลครูผู้สอน <span class="required">*</span></label>
+                <input type="text" id="supTeacher" placeholder="กรอกชื่อ-นามสกุล" required>
+              </div>
+              <div class="form-group">
+                <label>วันที่นิเทศ <span class="required">*</span></label>
+                <input type="date" id="supDate" required>
+              </div>
+              <div class="form-group">
+                <label>กลุ่มสาระ <span class="required">*</span></label>
+                <select id="supDepartment" required>
+                  <option value="">-- เลือกกลุ่มสาระ --</option>
+                  <option value="ภาษาไทย">ภาษาไทย</option>
+                  <option value="คณิตศาสตร์">คณิตศาสตร์</option>
+                  <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
+                  <option value="สังคมศึกษา">สังคมศึกษา</option>
+                  <option value="สุขศึกษา">สุขศึกษา</option>
+                  <option value="ศิลปะ">ศิลปะ</option>
+                  <option value="การงานอาชีพ">การงานอาชีพ</option>
+                  <option value="ภาษาต่างประเทศ">ภาษาต่างประเทศ</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>รายวิชา</label>
+                <input type="text" id="supSubject" placeholder="กรอกรายวิชา">
+              </div>
+              <div class="form-group full-width">
+                <label>จุดเด่น <span class="required">*</span></label>
+                <textarea id="supStrengths" rows="3" placeholder="บันทึกจุดเด่นของการจัดการเรียนรู้..." required></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label>จุดพัฒนา <span class="required">*</span></label>
+                <textarea id="supImprovements" rows="3" placeholder="บันทึกจุดที่ต้องพัฒนา..." required></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label>ข้อเสนอแนะ</label>
+                <textarea id="supSuggestions" rows="3" placeholder="ข้อเสนอแนะเพิ่มเติม..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>ระดับคุณภาพ <span class="required">*</span></label>
+                <select id="supQuality" required>
+                  <option value="">-- เลือกระดับ --</option>
+                  <option value="ดีมาก">ดีมาก</option>
+                  <option value="ดี">ดี</option>
+                  <option value="พอใช้">พอใช้</option>
+                  <option value="ปรับปรุง">ปรับปรุง</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <span class="material-icons-round">save</span> บันทึกผลการประเมิน
+              </button>
+              <button type="reset" class="btn btn-secondary">
+                <span class="material-icons-round">refresh</span> ล้างข้อมูล
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:2rem;">
+          <div class="card-header">
+            <h3><span class="material-icons-round">assessment</span> ผลการประเมินล่าสุด</h3>
+          </div>
+          <div class="card-body">
+            <div id="recentSupervisionsTable"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="page-admin" class="page">
+        <div class="page-header">
+          <h2>จัดการระบบ</h2>
+        </div>
+        <div class="admin-tabs">
+          <button class="tab-btn active" onclick="switchAdminTab('adminBooking')">
+            <span class="material-icons-round">event</span> จัดการการจอง
+          </button>
+          <button class="tab-btn" onclick="switchAdminTab('adminFiles')">
+            <span class="material-icons-round">folder</span> ตรวจผลงาน
+          </button>
+          <button class="tab-btn" onclick="switchAdminTab('adminReports')">
+            <span class="material-icons-round">summarize</span> รายงาน
+          </button>
+        </div>
+
+        <div id="adminBooking" class="admin-tab active">
+          <div class="card">
+            <div class="card-header">
+              <h3>รายการจองทั้งหมด</h3>
+              <div class="filter-group">
+                <select id="adminBookingStatus" onchange="loadAdminBookings()">
+                  <option value="">ทุกสถานะ</option>
+                  <option value="รอดำเนินการ">รอดำเนินการ</option>
+                  <option value="ยืนยันแล้ว">ยืนยันแล้ว</option>
+                  <option value="นิเทศแล้ว">นิเทศแล้ว</option>
+                  <option value="ปฏิเสธ">ปฏิเสธ</option>
+                </select>
+                <select id="adminBookingDept" onchange="loadAdminBookings()">
+                  <option value="">ทุกกลุ่มสาระ</option>
+                  <option value="ภาษาไทย">ภาษาไทย</option>
+                  <option value="คณิตศาสตร์">คณิตศาสตร์</option>
+                  <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
+                  <option value="สังคมศึกษา">สังคมศึกษา</option>
+                  <option value="สุขศึกษา">สุขศึกษา</option>
+                  <option value="ศิลปะ">ศิลปะ</option>
+                  <option value="การงานอาชีพ">การงานอาชีพ</option>
+                  <option value="ภาษาต่างประเทศ">ภาษาต่างประเทศ</option>
+                </select>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="adminBookingsTable"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="adminFiles" class="admin-tab">
+          <div class="card">
+            <div class="card-header">
+              <h3>ไฟล์งานทั้งหมด</h3>
+              <div class="filter-group">
+                <select id="adminFileStatus" onchange="loadAdminFiles()">
+                  <option value="">ทุกสถานะ</option>
+                  <option value="รอตรวจสอบ">รอตรวจสอบ</option>
+                  <option value="ผ่าน">ผ่าน</option>
+                  <option value="ปรับปรุง">ปรับปรุง</option>
+                </select>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="adminFilesTable"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="adminReports" class="admin-tab">
+          <div class="report-controls">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>ประเภทรายงาน</label>
+                <select id="reportType" onchange="updateReportFields()">
+                  <option value="individual">รายงานรายบุคคล</option>
+                  <option value="department">รายงานกลุ่มสาระ</option>
+                  <option value="summary">รายงานสรุป</option>
+                </select>
+              </div>
+              <div class="form-group" id="reportTeacherGroup">
+                <label>เลือกครู</label>
+                <select id="reportTeacher"><option value="">-- ทั้งหมด --</option></select>
+              </div>
+              <div class="form-group" id="reportDeptGroup" style="display:none;">
+                <label>เลือกกลุ่มสาระ</label>
+                <select id="reportDept"><option value="">-- ทั้งหมด --</option></select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button onclick="generateReport()" class="btn btn-primary">
+                <span class="material-icons-round">analytics</span> สร้างรายงาน
+              </button>
+              <button onclick="printReport()" class="btn btn-secondary">
+                <span class="material-icons-round">print</span> พิมพ์รายงาน
+              </button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:1rem;">
+            <div class="card-header">
+              <h3>ผลรายงาน</h3>
+            </div>
+            <div class="card-body" id="reportOutput">
+              <p class="empty-state">เลือกประเภทรายงานแล้วกด "สร้างรายงาน"</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="loginModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3><span class="material-icons-round">lock</span> เข้าสู่ระบบผู้ดูแล</h3>
+      <button class="modal-close" onclick="closeLoginModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>รหัสผ่าน</label>
+        <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน">
+      </div>
+      <button onclick="doLogin()" class="btn btn-primary btn-full">
+        <span class="material-icons-round">login</span> เข้าสู่ระบบ
+      </button>
+      <p id="loginError" class="error-text" style="display:none;"></p>
+    </div>
+  </div>
+</div>
+
+<div id="bookingDetailModal" class="modal" style="display:none;">
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <h3><span class="material-icons-round">event</span> รายละเอียดการจอง</h3>
+      <button class="modal-close" onclick="closeModal('bookingDetailModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="bookingDetailBody"></div>
+  </div>
+</div>
+
+<div id="supervisionDetailModal" class="modal" style="display:none;">
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <h3><span class="material-icons-round">rate_review</span> รายละเอียดการประเมิน</h3>
+      <button class="modal-close" onclick="closeModal('supervisionDetailModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="supervisionDetailBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+  <div class="spinner"></div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

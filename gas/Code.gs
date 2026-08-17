@@ -1,0 +1,512 @@
+const SPREADSHEET_ID = '1Q00PEcLzyskePGoVSCkTPnsYxo9zRssUU8njE-T9xc8';
+const DRIVE_FOLDER_ID = '1KRh9lgDCTCTkiuRxioVJn1hVGqhNf2bJ';
+const ADMIN_PASSWORD = 'admin2024';
+
+function doGet(e) {
+  const template = HtmlService.createTemplateFromFile('index');
+  return template.evaluate()
+    .setTitle('ระบบนิเทศภายในโรงเรียนบูกิตประชาอุปถัมภ์')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const action = data.action;
+
+  switch (action) {
+    case 'addBooking': return jsonResponse(addBooking(data));
+    case 'getBookings': return jsonResponse(getBookings(data));
+    case 'updateBookingStatus': return jsonResponse(updateBookingStatus(data));
+    case 'deleteBooking': return jsonResponse(deleteBooking(data));
+    case 'addFile': return jsonResponse(addFile(data));
+    case 'getFiles': return jsonResponse(getFiles(data));
+    case 'updateFileStatus': return jsonResponse(updateFileStatus(data));
+    case 'deleteFile': return jsonResponse(deleteFile(data));
+    case 'addSupervision': return jsonResponse(addSupervision(data));
+    case 'getSupervisions': return jsonResponse(getSupervisions(data));
+    case 'deleteSupervision': return jsonResponse(deleteSupervision(data));
+    case 'getDashboard': return jsonResponse(getDashboard());
+    case 'login': return jsonResponse(login(data));
+    case 'getTeachers': return jsonResponse(getTeachers());
+    default: return jsonResponse({ success: false, message: 'Unknown action' });
+  }
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function jsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getSheet(name) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    if (name === 'Booking') {
+      sheet = ss.insertSheet('Booking');
+      sheet.appendRow([
+        'Timestamp', 'Date', 'Time', 'Teacher Name', 'Department',
+        'Period', 'Subject Name', 'Subject Code', 'Class Level', 'Room', 'Status'
+      ]);
+      sheet.getRange('A1:K1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    } else if (name === 'Files') {
+      sheet = ss.insertSheet('Files');
+      sheet.appendRow([
+        'Timestamp', 'Teacher Name', 'Booking ID', 'File Type', 'File Name',
+        'File URL', 'Drive File ID', 'Status', 'Admin Note'
+      ]);
+      sheet.getRange('A1:I1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    } else if (name === 'Supervision') {
+      sheet = ss.insertSheet('Supervision');
+      sheet.appendRow([
+        'Timestamp', 'Teacher Name', 'Supervision Date', 'Department',
+        'Subject', 'Strengths', 'Improvements', 'Suggestions', 'Quality Level', 'Score', 'Booking ID'
+      ]);
+      sheet.getRange('A1:K1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+    }
+  }
+  return sheet;
+}
+
+function getDriveFolder() {
+  const mainFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  const folders = {};
+  const subFolderNames = ['Plans', 'Media', 'Photos', 'Clips'];
+  subFolderNames.forEach(name => {
+    const it = mainFolder.getFoldersByName(name);
+    folders[name] = it.hasNext() ? it.next() : mainFolder.createFolder(name);
+  });
+  return folders;
+}
+
+function createBookingId() {
+  return 'BK-' + new Date().getTime();
+}
+
+function login(data) {
+  if (data.password === ADMIN_PASSWORD) {
+    return { success: true, role: 'admin' };
+  }
+  return { success: false, message: 'รหัสผ่านไม่ถูกต้อง' };
+}
+
+function addBooking(data) {
+  try {
+    const sheet = getSheet('Booking');
+    const bookingId = createBookingId();
+    const timestamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+
+    const conflicts = sheet.getDataRange().getValues().filter((row, i) => {
+      if (i === 0) return false;
+      return row[1] === data.date &&
+             row[2] === data.time &&
+             row[5] === data.period &&
+             row[9] === data.room &&
+             row[10] !== 'ปฏิเสธ';
+    });
+
+    if (conflicts.length > 0) {
+      return { success: false, message: 'วัน เวลา คาบ และห้องเรียนนี้มีการจองแล้ว' };
+    }
+
+    sheet.appendRow([
+      timestamp, data.date, data.time, data.teacherName, data.department,
+      data.period, data.subjectName, data.subjectCode, data.classLevel, data.room, 'รอดำเนินการ'
+    ]);
+
+    return { success: true, message: 'จองวันนิเทศสำเร็จ', bookingId: bookingId };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function getBookings(data) {
+  try {
+    const sheet = getSheet('Booking');
+    const rows = sheet.getDataRange().getValues();
+    let bookings = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const booking = {
+        id: i + 1,
+        timestamp: rows[i][0],
+        date: rows[i][1],
+        time: rows[i][2],
+        teacherName: rows[i][3],
+        department: rows[i][4],
+        period: rows[i][5],
+        subjectName: rows[i][6],
+        subjectCode: rows[i][7],
+        classLevel: rows[i][8],
+        room: rows[i][9],
+        status: rows[i][10]
+      };
+
+      if (data) {
+        if (data.teacherName && booking.teacherName !== data.teacherName) continue;
+        if (data.status && booking.status !== data.status) continue;
+        if (data.department && booking.department !== data.department) continue;
+        if (data.date && booking.date !== data.date) continue;
+        if (data.month && !booking.date.startsWith(data.month)) continue;
+      }
+
+      bookings.push(booking);
+    }
+
+    bookings.reverse();
+    return { success: true, data: bookings };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function updateBookingStatus(data) {
+  try {
+    const sheet = getSheet('Booking');
+    const row = sheet.getRange(data.rowNumber, 11);
+    row.setValue(data.status);
+    return { success: true, message: 'อัพเดทสถานะสำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function deleteBooking(data) {
+  try {
+    const sheet = getSheet('Booking');
+    sheet.deleteRow(data.rowNumber);
+    return { success: true, message: 'ลบการจองสำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function addFile(data) {
+  try {
+    const sheet = getSheet('Files');
+    const timestamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+
+    sheet.appendRow([
+      timestamp, data.teacherName, data.bookingId || '',
+      data.fileType, data.fileName, data.fileUrl,
+      data.driveFileId || '', 'รอตรวจสอบ', data.adminNote || ''
+    ]);
+
+    return { success: true, message: 'บันทึกไฟล์สำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function uploadFileToDrive(base64Data, fileName, fileType) {
+  try {
+    const folders = getDriveFolder();
+    let folder;
+    switch (fileType) {
+      case 'แผนการสอน': folder = folders.Plans; break;
+      case 'สื่อการสอน': folder = folders.Media; break;
+      case 'ภาพกิจกรรม': folder = folders.Photos; break;
+      case 'คลิปวิดีโอ': folder = folders.Clips; break;
+      default: folder = folders.Plans;
+    }
+
+    const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), getMimeType(fileName), fileName);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    return {
+      success: true,
+      fileId: file.getId(),
+      fileUrl: file.getUrl(),
+      fileName: file.getName()
+    };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function getMimeType(fileName) {
+  const ext = fileName.split('.').pop().toLowerCase();
+  const mimeTypes = {
+    'pdf': 'application/pdf',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'ppt': 'application/vnd.ms-powerpoint',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+    'gif': 'image/gif', 'mp4': 'video/mp4'
+  };
+  return mimeTypes[ext] || 'application/octet-stream';
+}
+
+function getFiles(data) {
+  try {
+    const sheet = getSheet('Files');
+    const rows = sheet.getDataRange().getValues();
+    let files = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const file = {
+        id: i + 1,
+        timestamp: rows[i][0],
+        teacherName: rows[i][1],
+        bookingId: rows[i][2],
+        fileType: rows[i][3],
+        fileName: rows[i][4],
+        fileUrl: rows[i][5],
+        driveFileId: rows[i][6],
+        status: rows[i][7],
+        adminNote: rows[i][8]
+      };
+
+      if (data) {
+        if (data.teacherName && file.teacherName !== data.teacherName) continue;
+        if (data.status && file.status !== data.status) continue;
+        if (data.fileType && file.fileType !== data.fileType) continue;
+      }
+
+      files.push(file);
+    }
+
+    files.reverse();
+    return { success: true, data: files };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function updateFileStatus(data) {
+  try {
+    const sheet = getSheet('Files');
+    sheet.getRange(data.rowNumber, 8).setValue(data.status);
+    if (data.adminNote !== undefined) {
+      sheet.getRange(data.rowNumber, 9).setValue(data.adminNote);
+    }
+    return { success: true, message: 'อัพเดทสถานะไฟล์สำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function deleteFile(data) {
+  try {
+    const sheet = getSheet('Files');
+    if (data.driveFileId) {
+      try { DriveApp.getFileById(data.driveFileId).setTrashed(true); } catch (e) {}
+    }
+    sheet.deleteRow(data.rowNumber);
+    return { success: true, message: 'ลบไฟล์สำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function addSupervision(data) {
+  try {
+    const sheet = getSheet('Supervision');
+    const timestamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+
+    sheet.appendRow([
+      timestamp, data.teacherName, data.supervisionDate, data.department,
+      data.subject, data.strengths, data.improvements, data.suggestions,
+      data.qualityLevel, data.score || '', data.bookingId || ''
+    ]);
+
+    return { success: true, message: 'บันทึกผลการประเมินสำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function getSupervisions(data) {
+  try {
+    const sheet = getSheet('Supervision');
+    const rows = sheet.getDataRange().getValues();
+    let supervisions = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const sup = {
+        id: i + 1,
+        timestamp: rows[i][0],
+        teacherName: rows[i][1],
+        supervisionDate: rows[i][2],
+        department: rows[i][3],
+        subject: rows[i][4],
+        strengths: rows[i][5],
+        improvements: rows[i][6],
+        suggestions: rows[i][7],
+        qualityLevel: rows[i][8],
+        score: rows[i][9],
+        bookingId: rows[i][10]
+      };
+
+      if (data) {
+        if (data.teacherName && sup.teacherName !== data.teacherName) continue;
+        if (data.department && sup.department !== data.department) continue;
+        if (data.month && !sup.supervisionDate.startsWith(data.month)) continue;
+      }
+
+      supervisions.push(sup);
+    }
+
+    supervisions.reverse();
+    return { success: true, data: supervisions };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function deleteSupervision(data) {
+  try {
+    const sheet = getSheet('Supervision');
+    sheet.deleteRow(data.rowNumber);
+    return { success: true, message: 'ลบผลการประเมินสำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function getTeachers() {
+  try {
+    const sheet = getSheet('Booking');
+    const rows = sheet.getDataRange().getValues();
+    const teachers = new Set();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][3]) teachers.add(rows[i][3]);
+    }
+    return { success: true, data: Array.from(teachers).sort() };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function getDashboard() {
+  try {
+    const bookingSheet = getSheet('Booking');
+    const fileSheet = getSheet('Files');
+    const supSheet = getSheet('Supervision');
+
+    const bookingRows = bookingSheet.getDataRange().getValues();
+    const fileRows = fileSheet.getDataRange().getValues();
+    const supRows = supSheet.getDataRange().getValues();
+
+    const today = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd');
+    const thisMonth = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM');
+
+    let stats = {
+      totalBookings: 0,
+      pendingBookings: 0,
+      confirmedBookings: 0,
+      completedBookings: 0,
+      rejectedBookings: 0,
+      todayBookings: 0,
+      totalFiles: 0,
+      pendingFiles: 0,
+      approvedFiles: 0,
+      revisionFiles: 0,
+      totalSupervisions: 0,
+      thisMonthSupervisions: 0,
+      monthlyStats: {},
+      departmentStats: {},
+      recentBookings: [],
+      recentFiles: [],
+      calendarEvents: []
+    };
+
+    for (let i = 1; i < bookingRows.length; i++) {
+      const status = bookingRows[i][10];
+      const date = bookingRows[i][1];
+      const dept = bookingRows[i][4];
+
+      stats.totalBookings++;
+      if (status === 'รอดำเนินการ') stats.pendingBookings++;
+      else if (status === 'ยืนยันแล้ว') stats.confirmedBookings++;
+      else if (status === 'นิเทศแล้ว') stats.completedBookings++;
+      else if (status === 'ปฏิเสธ') stats.rejectedBookings++;
+      if (date === today) stats.todayBookings++;
+
+      const month = date.substring(0, 7);
+      stats.monthlyStats[month] = (stats.monthlyStats[month] || 0) + 1;
+      stats.departmentStats[dept] = (stats.departmentStats[dept] || 0) + 1;
+
+      stats.calendarEvents.push({
+        date: date,
+        title: bookingRows[i][3] + ' - ' + bookingRows[i][6],
+        status: status,
+        department: dept
+      });
+
+      if (stats.recentBookings.length < 5) {
+        stats.recentBookings.push({
+          id: i + 1,
+          date: date,
+          time: bookingRows[i][2],
+          teacherName: bookingRows[i][3],
+          department: bookingRows[i][4],
+          subjectName: bookingRows[i][6],
+          room: bookingRows[i][9],
+          status: status
+        });
+      }
+    }
+
+    for (let i = 1; i < fileRows.length; i++) {
+      const status = fileRows[i][7];
+      stats.totalFiles++;
+      if (status === 'รอตรวจสอบ') stats.pendingFiles++;
+      else if (status === 'ผ่าน') stats.approvedFiles++;
+      else if (status === 'ปรับปรุง') stats.revisionFiles++;
+
+      if (stats.recentFiles.length < 5) {
+        stats.recentFiles.push({
+          id: i + 1,
+          timestamp: fileRows[i][0],
+          teacherName: fileRows[i][1],
+          fileType: fileRows[i][3],
+          fileName: fileRows[i][4],
+          status: status
+        });
+      }
+    }
+
+    for (let i = 1; i < supRows.length; i++) {
+      stats.totalSupervisions++;
+      if (String(supRows[i][2]).startsWith(thisMonth)) stats.thisMonthSupervisions++;
+    }
+
+    stats.calendarEvents.reverse();
+    stats.recentBookings.reverse();
+    stats.recentFiles.reverse();
+
+    return { success: true, data: stats };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function setupSheets() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheets = ['Booking', 'Files', 'Supervision'];
+  sheets.forEach(name => getSheet(name));
+
+  const existingSheets = ss.getSheets().map(s => s.getName());
+  existingSheets.forEach(name => {
+    if (name === 'Sheet1' && sheets.includes('Booking')) {
+      try { ss.deleteSheet(ss.getSheetByName('Sheet1')); } catch(e) {}
+    }
+  });
+}
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('ระบบนิเทศ')
+    .addItem('ตั้งค่าชีท', 'setupSheets')
+    .addToUi();
+}
