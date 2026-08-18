@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbxkn4VkPKfKKMgpDwjDOugMLwaCjOGGfTrvF9XGkKYEAukDh5QiVzFFYms_NgOXaYj5/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwic4tklTKE7jDDoBwvpJDuS2lZPbTx0234vrKtPHzUTK43zC_yXbr9Lvbxf9uRE33b/exec';
 
 let isAdmin = false;
 let calendarMonth = new Date().getMonth();
@@ -588,7 +588,10 @@ function showSupervisionDetail(index) {
 
 // ==================== LOGIN ====================
 
+let currentUser = null;
+
 function showLoginModal() {
+  document.getElementById('loginUsername').value = '';
   document.getElementById('loginPassword').value = '';
   document.getElementById('loginError').style.display = 'none';
   showModal('loginModal');
@@ -599,26 +602,33 @@ function closeLoginModal() {
 }
 
 async function doLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
-  const result = await apiCall('login', { password });
+  const result = await apiCall('login', { username, password });
 
   if (result.success) {
-    isAdmin = true;
-    sessionStorage.setItem('adminSession', 'true');
-    showAdminUI();
+    currentUser = result;
+    if (result.role === 'admin') {
+      isAdmin = true;
+      sessionStorage.setItem('adminSession', 'true');
+      showAdminUI();
+    }
+    sessionStorage.setItem('currentUser', JSON.stringify(result));
     closeLoginModal();
-    showToast('เข้าสู่ระบบสำเร็จ', 'success');
-    navigateTo('admin');
+    showToast('เข้าสู่ระบบสำเร็จ: ' + (result.displayName || username), 'success');
+    if (result.role === 'admin') navigateTo('admin');
   } else {
     const err = document.getElementById('loginError');
-    err.textContent = result.message || 'รหัสผ่านไม่ถูกต้อง';
+    err.textContent = result.message || 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง';
     err.style.display = 'block';
   }
 }
 
 function logout() {
   isAdmin = false;
+  currentUser = null;
   sessionStorage.removeItem('adminSession');
+  sessionStorage.removeItem('currentUser');
   document.getElementById('loginBtn').style.display = 'flex';
   document.getElementById('userBadge').style.display = 'none';
   document.querySelector('.admin-only').style.display = 'none';
@@ -644,6 +654,138 @@ function switchAdminTab(tabId) {
   if (tabId === 'adminBooking') loadAdminBookings();
   else if (tabId === 'adminFiles') loadAdminFiles();
   else if (tabId === 'adminReports') loadReportData();
+  else if (tabId === 'adminUsers') loadAdminUsers();
+}
+
+// ==================== USER MANAGEMENT ====================
+
+async function loadAdminUsers() {
+  const result = await apiCall('getUsers', {});
+  const container = document.getElementById('adminUsersTable');
+
+  if (!result.success || result.data.length === 0) {
+    container.innerHTML = '<p class="empty-state"><span class="material-icons-round">people</span>ไม่มีผู้ใช้</p>';
+    return;
+  }
+
+  const roleLabels = { admin: 'ผู้ดูแลระบบ', supervisor: 'หัวหน้ากลุ่มสาระ', teacher: 'ครูผู้สอน' };
+  const roleBadges = { admin: 'badge-excellent', supervisor: 'badge-confirmed', teacher: 'badge-good' };
+
+  let html = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>ชื่อผู้ใช้</th><th>ชื่อที่แสดง</th><th>สิทธิ์</th><th>กลุ่มสาระ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>';
+  result.data.forEach((u, i) => {
+    const statusBadge = u.status === 'active'
+      ? '<span class="badge badge-completed">ใช้งาน</span>'
+      : '<span class="badge badge-rejected">ระงับ</span>';
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td>${u.username}</td>
+      <td>${u.displayName}</td>
+      <td><span class="badge ${roleBadges[u.role] || ''}">${roleLabels[u.role] || u.role}</span></td>
+      <td>${u.department || '-'}</td>
+      <td>${statusBadge}</td>
+      <td class="btn-actions">
+        <button class="btn btn-sm btn-primary" onclick="editUser(${u.id}, '${u.username}', '${u.displayName.replace(/'/g, "\\'")}', '${u.role}', '${u.department || ''}')" title="แก้ไข"><span class="material-icons-round">edit</span></button>
+        ${u.username !== 'admin' ? `
+          <button class="btn btn-sm ${u.status === 'active' ? 'btn-warning' : 'btn-success'}" onclick="toggleUserStatusAction(${u.id})" title="${u.status === 'active' ? 'ระงับ' : 'เปิดใช้งาน'}">
+            <span class="material-icons-round">${u.status === 'active' ? 'block' : 'check_circle'}</span>
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="confirmDeleteUser(${u.id})" title="ลบ"><span class="material-icons-round">delete</span></button>
+        ` : ''}
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
+function showAddUserModal() {
+  document.getElementById('userModalTitle').innerHTML = '<span class="material-icons-round">person_add</span> เพิ่มผู้ใช้';
+  document.getElementById('editUserRow').value = '';
+  document.getElementById('userUsername').value = '';
+  document.getElementById('userUsername').disabled = false;
+  document.getElementById('userPassword').value = '';
+  document.getElementById('userPassword').required = true;
+  document.getElementById('passwordHint').textContent = '';
+  document.getElementById('userDisplayName').value = '';
+  document.getElementById('userRole').value = 'teacher';
+  document.getElementById('userDepartment').value = '';
+  showModal('userModal');
+}
+
+function editUser(id, username, displayName, role, department) {
+  document.getElementById('userModalTitle').innerHTML = '<span class="material-icons-round">edit</span> แก้ไขผู้ใช้';
+  document.getElementById('editUserRow').value = id;
+  document.getElementById('userUsername').value = username;
+  document.getElementById('userUsername').disabled = true;
+  document.getElementById('userPassword').value = '';
+  document.getElementById('userPassword').required = false;
+  document.getElementById('passwordHint').textContent = 'ปล่อยว่างหากไม่ต้องการเปลี่ยน';
+  document.getElementById('userDisplayName').value = displayName;
+  document.getElementById('userRole').value = role;
+  document.getElementById('userDepartment').value = department;
+  showModal('userModal');
+}
+
+async function saveUser() {
+  const editRow = document.getElementById('editUserRow').value;
+  const username = document.getElementById('userUsername').value.trim();
+  const password = document.getElementById('userPassword').value;
+  const displayName = document.getElementById('userDisplayName').value.trim();
+  const role = document.getElementById('userRole').value;
+  const department = document.getElementById('userDepartment').value;
+
+  if (!username || !displayName) {
+    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+    return;
+  }
+
+  if (editRow) {
+    const result = await apiCall('updateUser', {
+      rowNumber: parseInt(editRow),
+      displayName, role, department, password: password || undefined
+    });
+    if (result.success) {
+      showToast('อัพเดทผู้ใช้สำเร็จ', 'success');
+      closeModal('userModal');
+      loadAdminUsers();
+    } else {
+      showToast(result.message, 'error');
+    }
+  } else {
+    if (!password) {
+      showToast('กรุณากรอกรหัสผ่าน', 'warning');
+      return;
+    }
+    const result = await apiCall('addUser', { username, password, displayName, role, department });
+    if (result.success) {
+      showToast('เพิ่มผู้ใช้สำเร็จ', 'success');
+      closeModal('userModal');
+      loadAdminUsers();
+    } else {
+      showToast(result.message, 'error');
+    }
+  }
+}
+
+async function toggleUserStatusAction(rowNumber) {
+  const result = await apiCall('toggleUserStatus', { rowNumber });
+  if (result.success) {
+    showToast(result.message, 'success');
+    loadAdminUsers();
+  } else {
+    showToast(result.message, 'error');
+  }
+}
+
+async function confirmDeleteUser(rowNumber) {
+  if (!confirm('ต้องการลบผู้ใช้นี้หรือไม่?')) return;
+  const result = await apiCall('deleteUser', { rowNumber });
+  if (result.success) {
+    showToast('ลบผู้ใช้สำเร็จ', 'success');
+    loadAdminUsers();
+  } else {
+    showToast(result.message, 'error');
+  }
 }
 
 async function loadAdminBookings() {

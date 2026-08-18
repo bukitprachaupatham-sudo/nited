@@ -29,6 +29,11 @@ function doPost(e) {
     case 'getDashboard': return jsonResponse(getDashboard());
     case 'login': return jsonResponse(login(data));
     case 'getTeachers': return jsonResponse(getTeachers());
+    case 'getUsers': return jsonResponse(getUsers(data));
+    case 'addUser': return jsonResponse(addUser(data));
+    case 'updateUser': return jsonResponse(updateUser(data));
+    case 'deleteUser': return jsonResponse(deleteUser(data));
+    case 'toggleUserStatus': return jsonResponse(toggleUserStatus(data));
     default: return jsonResponse({ success: false, message: 'Unknown action' });
   }
 }
@@ -70,6 +75,17 @@ function getSheet(name) {
       ]);
       sheet.getRange('A1:K1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
       sheet.setFrozenRows(1);
+    } else if (name === 'Users') {
+      sheet = ss.insertSheet('Users');
+      sheet.appendRow([
+        'Timestamp', 'Username', 'Password', 'DisplayName', 'Role', 'Department', 'Status'
+      ]);
+      sheet.getRange('A1:G1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
+      sheet.setFrozenRows(1);
+      sheet.appendRow([
+        Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss'),
+        'admin', 'bukit2569', 'ผู้ดูแลระบบ', 'admin', '-', 'active'
+      ]);
     }
   }
   return sheet;
@@ -91,10 +107,133 @@ function createBookingId() {
 }
 
 function login(data) {
-  if (data.password === ADMIN_PASSWORD) {
-    return { success: true, role: 'admin' };
+  try {
+    const sheet = getSheet('Users');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][1] === data.username && rows[i][2] === data.password) {
+        if (rows[i][6] !== 'active') {
+          return { success: false, message: 'บัญชีนี้ถูกระงับการใช้งาน' };
+        }
+        return {
+          success: true,
+          role: rows[i][4],
+          displayName: rows[i][3],
+          department: rows[i][5],
+          username: rows[i][1]
+        };
+      }
+    }
+    if (data.password === ADMIN_PASSWORD && !data.username) {
+      return { success: true, role: 'admin', displayName: 'ผู้ดูแลระบบ', username: 'admin' };
+    }
+    return { success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+  } catch (error) {
+    if (data.password === ADMIN_PASSWORD && !data.username) {
+      return { success: true, role: 'admin', displayName: 'ผู้ดูแลระบบ', username: 'admin' };
+    }
+    return { success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
   }
-  return { success: false, message: 'รหัสผ่านไม่ถูกต้อง' };
+}
+
+function getUsers(data) {
+  try {
+    const sheet = getSheet('Users');
+    const rows = sheet.getDataRange().getValues();
+    let users = [];
+    for (let i = 1; i < rows.length; i++) {
+      const user = {
+        id: i + 1,
+        timestamp: rows[i][0],
+        username: rows[i][1],
+        displayName: rows[i][3],
+        role: rows[i][4],
+        department: rows[i][5],
+        status: rows[i][6]
+      };
+      if (data) {
+        if (data.role && user.role !== data.role) continue;
+        if (data.status && user.status !== data.status) continue;
+      }
+      users.push(user);
+    }
+    users.reverse();
+    return { success: true, data: users };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function addUser(data) {
+  try {
+    const sheet = getSheet('Users');
+    const rows = sheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][1] === data.username) {
+        return { success: false, message: 'ชื่อผู้ใช้นี้มีอยู่แล้ว' };
+      }
+    }
+    const timestamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    sheet.appendRow([
+      timestamp, data.username, data.password, data.displayName,
+      data.role || 'teacher', data.department || '', 'active'
+    ]);
+    return { success: true, message: 'เพิ่มผู้ใช้สำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function updateUser(data) {
+  try {
+    const sheet = getSheet('Users');
+    const row = data.rowNumber;
+    if (data.displayName !== undefined) sheet.getRange(row, 4).setValue(data.displayName);
+    if (data.role !== undefined) sheet.getRange(row, 5).setValue(data.role);
+    if (data.department !== undefined) sheet.getRange(row, 6).setValue(data.department);
+    if (data.password !== undefined && data.password !== '') {
+      sheet.getRange(row, 3).setValue(data.password);
+    }
+    return { success: true, message: 'อัพเดทผู้ใช้สำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function deleteUser(data) {
+  try {
+    const sheet = getSheet('Users');
+    const rows = sheet.getDataRange().getValues();
+    if (rows[data.rowNumber - 1] && rows[data.rowNumber - 1][4] === 'admin') {
+      const adminCount = rows.filter((r, i) => i > 0 && r[4] === 'admin').length;
+      if (adminCount <= 1) {
+        return { success: false, message: 'ไม่สามารถลบผู้ดูแลระบบคนสุดท้ายได้' };
+      }
+    }
+    sheet.deleteRow(data.rowNumber);
+    return { success: true, message: 'ลบผู้ใช้สำเร็จ' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function toggleUserStatus(data) {
+  try {
+    const sheet = getSheet('Users');
+    const rows = sheet.getDataRange().getValues();
+    const currentStatus = rows[data.rowNumber - 1] ? rows[data.rowNumber - 1][6] : '';
+    if (rows[data.rowNumber - 1] && rows[data.rowNumber - 1][4] === 'admin') {
+      const adminCount = rows.filter((r, i) => i > 0 && r[4] === 'admin' && r[6] === 'active').length;
+      if (currentStatus === 'active' && adminCount <= 1) {
+        return { success: false, message: 'ไม่สามารถระงับผู้ดูแลระบบคนสุดท้ายได้' };
+      }
+    }
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    sheet.getRange(data.rowNumber, 7).setValue(newStatus);
+    return { success: true, message: newStatus === 'active' ? 'เปิดใช้งานแล้ว' : 'ระงับการใช้งานแล้ว' };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
 }
 
 function addBooking(data) {

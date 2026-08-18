@@ -364,6 +364,9 @@
           <button class="tab-btn" onclick="switchAdminTab('adminReports')">
             <span class="material-icons-round">summarize</span> รายงาน
           </button>
+          <button class="tab-btn" onclick="switchAdminTab('adminUsers')">
+            <span class="material-icons-round">manage_accounts</span> จัดการผู้ใช้
+          </button>
         </div>
 
         <div id="adminBooking" class="admin-tab active">
@@ -454,9 +457,74 @@
             </div>
           </div>
         </div>
+
+        <div id="adminUsers" class="admin-tab">
+          <div class="card">
+            <div class="card-header">
+              <h3>จัดการผู้ใช้งาน</h3>
+              <button class="btn btn-primary btn-sm" onclick="showAddUserModal()">
+                <span class="material-icons-round">person_add</span> เพิ่มผู้ใช้
+              </button>
+            </div>
+            <div class="card-body">
+              <div id="adminUsersTable"></div>
+            </div>
+          </div>
+        </div>
+
       </section>
     </div>
   </main>
+</div>
+
+<div id="userModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="userModalTitle"><span class="material-icons-round">person_add</span> เพิ่มผู้ใช้</h3>
+      <button class="modal-close" onclick="closeModal('userModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editUserRow">
+      <div class="form-group">
+        <label>ชื่อผู้ใช้ (Username) <span class="required">*</span></label>
+        <input type="text" id="userUsername" placeholder="กรอกชื่อผู้ใช้" required>
+      </div>
+      <div class="form-group">
+        <label>รหัสผ่าน <span class="required">*</span></label>
+        <input type="text" id="userPassword" placeholder="กรอกรหัสผ่าน">
+        <small class="hint-text" id="passwordHint"></small>
+      </div>
+      <div class="form-group">
+        <label>ชื่อที่แสดง <span class="required">*</span></label>
+        <input type="text" id="userDisplayName" placeholder="กรอกชื่อ-นามสกุล" required>
+      </div>
+      <div class="form-group">
+        <label>สิทธิ์ผู้ใช้ <span class="required">*</span></label>
+        <select id="userRole">
+          <option value="teacher">ครูผู้สอน</option>
+          <option value="supervisor">หัวหน้ากลุ่มสาระ</option>
+          <option value="admin">ผู้ดูแลระบบ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>กลุ่มสาระ</label>
+        <select id="userDepartment">
+          <option value="">-- ไม่ระบุ --</option>
+          <option value="ภาษาไทย">ภาษาไทย</option>
+          <option value="คณิตศาสตร์">คณิตศาสตร์</option>
+          <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
+          <option value="สังคมศึกษา">สังคมศึกษา</option>
+          <option value="สุขศึกษา">สุขศึกษา</option>
+          <option value="ศิลปะ">ศิลปะ</option>
+          <option value="การงานอาชีพ">การงานอาชีพ</option>
+          <option value="ภาษาต่างประเทศ">ภาษาต่างประเทศ</option>
+        </select>
+      </div>
+      <button onclick="saveUser()" class="btn btn-primary btn-full">
+        <span class="material-icons-round">save</span> บันทึก
+      </button>
+    </div>
+  </div>
 </div>
 
 <div id="loginModal" class="modal" style="display:none;">
@@ -466,6 +534,10 @@
       <button class="modal-close" onclick="closeLoginModal()">&times;</button>
     </div>
     <div class="modal-body">
+      <div class="form-group">
+        <label>ชื่อผู้ใช้</label>
+        <input type="text" id="loginUsername" placeholder="กรอกชื่อผู้ใช้">
+      </div>
       <div class="form-group">
         <label>รหัสผ่าน</label>
         <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน">
