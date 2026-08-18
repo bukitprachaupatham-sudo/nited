@@ -1,6 +1,6 @@
 const SPREADSHEET_ID = '1Q00PEcLzyskePGoVSCkTPnsYxo9zRssUU8njE-T9xc8';
 const DRIVE_FOLDER_ID = '1KRh9lgDCTCTkiuRxioVJn1hVGqhNf2bJ';
-const ADMIN_PASSWORD = 'admin2024';
+const ADMIN_PASSWORD = 'bukit2569';
 
 function doGet(e) {
   const template = HtmlService.createTemplateFromFile('index');

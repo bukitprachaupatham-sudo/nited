@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbxcHXUhSiFxnbJcTt4TuVccKkC3x1oF7eXO7zQ8cSsLQMvWdIsJOhYJwEVVh0DiXlMc/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxkn4VkPKfKKMgpDwjDOugMLwaCjOGGfTrvF9XGkKYEAukDh5QiVzFFYms_NgOXaYj5/exec';
 
 let isAdmin = false;
 let calendarMonth = new Date().getMonth();
