@@ -80,11 +80,12 @@ async function apiCall(action, data = {}) {
     showLoading(true);
     const response = await fetch(API_URL, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action, ...data })
     });
-    const result = await response.json();
+    const text = await response.text();
+    const result = JSON.parse(text);
     showLoading(false);
     return result;
   } catch (error) {
