@@ -11,26 +11,41 @@
 <body>
 
 <div id="loginPage">
+  <div class="login-bg-shape shape-1"></div>
+  <div class="login-bg-shape shape-2"></div>
+  <div class="login-bg-shape shape-3"></div>
+
   <div class="login-card">
     <div class="login-logo"><span class="material-icons-round">school</span></div>
+    <span class="login-badge">e-Inspection System</span>
     <h1>ระบบนิเทศภายในโรงเรียน</h1>
-    <p class="login-school">โรงเรียนบูกิตประชาอุปถัมภ์</p>
+    <p class="login-school">โรงเรียนบูกิตประชาอุปถัมภ์ · สพม.นราธิวาส</p>
+
     <form onsubmit="doLogin(event)">
+      <label class="login-label" for="loginUsername">ชื่อผู้ใช้</label>
       <div class="login-field">
-        <span class="material-icons-round">person</span>
-        <input type="text" id="loginUsername" placeholder="ชื่อผู้ใช้" autocomplete="username" required>
+        <span class="material-icons-round">person_outline</span>
+        <input type="text" id="loginUsername" placeholder="กรอกชื่อผู้ใช้" autocomplete="username" required>
       </div>
-      <div class="login-field">
-        <span class="material-icons-round">lock</span>
-        <input type="password" id="loginPassword" placeholder="รหัสผ่าน" autocomplete="current-password" required>
+
+      <label class="login-label" for="loginPassword">รหัสผ่าน</label>
+      <div class="login-field has-toggle">
+        <span class="material-icons-round">lock_outline</span>
+        <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน" autocomplete="current-password" required>
+        <button type="button" class="toggle-pass" onclick="togglePassword()" tabindex="-1" title="แสดง/ซ่อนรหัสผ่าน">
+          <span class="material-icons-round" id="togglePassIcon">visibility_off</span>
+        </button>
       </div>
+
       <button type="submit" class="btn-login-submit" id="loginSubmitBtn">
-        <span class="material-icons-round">login</span> เข้าสู่ระบบ
+        <span>เข้าสู่ระบบ</span>
+        <span class="material-icons-round">arrow_forward</span>
       </button>
       <p id="loginError" class="error-text" style="display:none;"></p>
     </form>
   </div>
-  <p class="login-footer">โรงเรียนบูกิตประชาอุปถัมภ์ · สพม.นราธิวาส</p>
+
+  <p class="login-footer">© 2026 โรงเรียนบูกิตประชาอุปถัมภ์ · สำนักงานเขตพื้นที่การศึกษามัธยมศึกษา นราธิวาส</p>
 </div>
 
 <div id="app" style="display:none;">

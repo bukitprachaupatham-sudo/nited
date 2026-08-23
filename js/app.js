@@ -875,6 +875,14 @@ function showLoginPage() {
   document.getElementById('loginError').style.display = 'none';
 }
 
+function togglePassword() {
+  const input = document.getElementById('loginPassword');
+  const icon = document.getElementById('togglePassIcon');
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  icon.textContent = show ? 'visibility' : 'visibility_off';
+}
+
 async function doLogin(e) {
   if (e) e.preventDefault();
 
