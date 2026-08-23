@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbwwokjKng-BShN-LfL6Z_cpJ093yceohSoZlZihDlwS99_mj7z8YAy1mWh4wWlH8fY-/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwxDsmSQVG_LSr5Pasr1GxABVOIn4TYc6UM1rEzB6qSr1hrrw4AJwFkYZwx04zMvhg/exec';
 
 let isAdmin = false;
 let calendarMonth = new Date().getMonth();
@@ -183,6 +183,58 @@ async function loadDashboard() {
 
   renderRecentBookings(s.recentBookings);
   renderRecentFiles(s.recentFiles);
+  renderSupervisionReport(s);
+}
+
+function renderSupervisionReport(stats) {
+  const sumRow = document.getElementById('supSummaryRow');
+  if (!sumRow) return;
+
+  sumRow.innerHTML = `
+    <div class="report-sum-box"><h4>${Number(stats.averageScore || 0).toFixed(1)}</h4><p>คะแนนเฉลี่ย (จาก 100)</p></div>
+    <div class="report-sum-box"><h4>${stats.totalSupervisions}</h4><p>ครั้งที่ประเมินทั้งหมด</p></div>
+    <div class="report-sum-box"><h4>${stats.thisMonthSupervisions}</h4><p>ประเมินเดือนนี้</p></div>
+  `;
+
+  const distOrder = ['ดีมาก เป็นตัวอย่างที่ดี', 'ดี', 'ค่อนข้างดี', 'ยอมรับได้ (ควรปรับปรุง)', 'ต้องปรับปรุง'];
+  const barCls = { 'ดีมาก เป็นตัวอย่างที่ดี': 'qd-green', 'ดี': 'qd-blue', 'ค่อนข้างดี': 'qd-yellow', 'ยอมรับได้ (ควรปรับปรุง)': 'qd-orange', 'ต้องปรับปรุง': 'qd-red' };
+  const qc = stats.qualityCounts || {};
+  const maxCount = Math.max(1, ...Object.values(qc));
+
+  let distHtml = '';
+  distOrder.forEach(level => {
+    if (qc[level]) {
+      distHtml += `
+        <div class="quality-dist-item">
+          <div class="qd-label">${level}</div>
+          <div class="qd-bar-wrap"><div class="qd-bar ${barCls[level]}" style="width:${Math.round(qc[level] / maxCount * 100)}%;"></div></div>
+          <div class="qd-count">${qc[level]} ครั้ง</div>
+        </div>`;
+    }
+  });
+  document.getElementById('qualityDistContainer').innerHTML =
+    distHtml || '<p class="empty-state">ยังไม่มีข้อมูลการประเมิน</p>';
+
+  const recents = stats.recentSupervisions || [];
+  const container = document.getElementById('recentSupDashboardTable');
+  if (recents.length === 0) {
+    container.innerHTML = '<p class="empty-state">ยังไม่มีผลการประเมิน</p>';
+    return;
+  }
+
+  let html = '<div class="table-wrapper"><table><thead><tr><th>วันที่สอน</th><th>ครูผู้สอน</th><th>กลุ่มสาระ</th><th>เรื่องที่สอน</th><th>คะแนน</th><th>ระดับคุณภาพ</th></tr></thead><tbody>';
+  recents.forEach(s => {
+    html += `<tr>
+      <td>${formatDate(s.teachingDate)}</td>
+      <td>${s.teacherName}</td>
+      <td>${getDeptBadge(s.department)}</td>
+      <td>${s.topic || '-'}</td>
+      <td><strong>${s.totalScore}</strong>/100</td>
+      <td>${getQualityBadge(s.qualityLevel)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
 }
 
 function renderCalendar() {

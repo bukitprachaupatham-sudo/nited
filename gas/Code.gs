@@ -128,6 +128,14 @@ function createBookingId() {
   return 'BK-' + new Date().getTime();
 }
 
+function toDateString(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return Utilities.formatDate(value, 'Asia/Bangkok', 'yyyy-MM-dd');
+  }
+  return String(value);
+}
+
 function login(data) {
   try {
     const sheet = getSheet('Users');
@@ -266,7 +274,7 @@ function addBooking(data) {
 
     const conflicts = sheet.getDataRange().getValues().filter((row, i) => {
       if (i === 0) return false;
-      return row[1] === data.date &&
+      return toDateString(row[1]) === data.date &&
              row[2] === data.time &&
              row[5] === data.period &&
              row[9] === data.room &&
@@ -298,7 +306,7 @@ function getBookings(data) {
       const booking = {
         id: i + 1,
         timestamp: rows[i][0],
-        date: rows[i][1],
+        date: toDateString(rows[i][1]),
         time: rows[i][2],
         teacherName: rows[i][3],
         department: rows[i][4],
@@ -317,7 +325,6 @@ function getBookings(data) {
         if (data.date && booking.date !== data.date) continue;
         if (data.month && !booking.date.startsWith(data.month)) continue;
       }
-
       bookings.push(booking);
     }
 
@@ -507,7 +514,7 @@ function getSupervisions(data) {
         department: rows[i][4],
         gradeLevel: rows[i][5],
         period: rows[i][6],
-        teachingDate: rows[i][7],
+        teachingDate: toDateString(rows[i][7]),
         topic: rows[i][8],
         techniques: rows[i][9],
         scores: rows[i][10],
@@ -588,6 +595,9 @@ function getDashboard() {
       thisMonthSupervisions: 0,
       monthlyStats: {},
       departmentStats: {},
+      averageScore: 0,
+      qualityCounts: {},
+      recentSupervisions: [],
       recentBookings: [],
       recentFiles: [],
       calendarEvents: []
@@ -595,7 +605,7 @@ function getDashboard() {
 
     for (let i = 1; i < bookingRows.length; i++) {
       const status = bookingRows[i][10];
-      const date = bookingRows[i][1];
+      const date = toDateString(bookingRows[i][1]);
       const dept = bookingRows[i][4];
 
       stats.totalBookings++;
@@ -649,14 +659,42 @@ function getDashboard() {
       }
     }
 
+    let supScoreSum = 0;
+    let supScoreCount = 0;
+
     for (let i = 1; i < supRows.length; i++) {
+      const teachingDate = toDateString(supRows[i][7]);
       stats.totalSupervisions++;
-      if (String(supRows[i][7]).startsWith(thisMonth)) stats.thisMonthSupervisions++;
+      if (teachingDate.startsWith(thisMonth)) stats.thisMonthSupervisions++;
+
+      const scoreVal = supRows[i][11];
+      if (scoreVal !== '' && scoreVal !== undefined && scoreVal !== null) {
+        const score = Number(scoreVal) || 0;
+        supScoreSum += score;
+        supScoreCount++;
+        const level = String(supRows[i][13] || 'ไม่ระบุ');
+        stats.qualityCounts[level] = (stats.qualityCounts[level] || 0) + 1;
+      }
+
+      if (stats.recentSupervisions.length < 5) {
+        stats.recentSupervisions.push({
+          id: i + 1,
+          teachingDate: teachingDate,
+          teacherName: supRows[i][3],
+          department: supRows[i][4],
+          topic: supRows[i][8],
+          totalScore: Number(scoreVal) || 0,
+          qualityLevel: String(supRows[i][13] || '')
+        });
+      }
     }
+
+    stats.averageScore = supScoreCount > 0 ? Math.round((supScoreSum / supScoreCount) * 10) / 10 : 0;
 
     stats.calendarEvents.reverse();
     stats.recentBookings.reverse();
     stats.recentFiles.reverse();
+    stats.recentSupervisions.reverse();
 
     return { success: true, data: stats };
   } catch (error) {
