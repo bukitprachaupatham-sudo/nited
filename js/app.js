@@ -154,11 +154,7 @@ async function loadDashboard() {
   document.getElementById('statsGrid').innerHTML = `
     <div class="stat-card">
       <div class="stat-icon blue"><span class="material-icons-round">event_available</span></div>
-      <div class="stat-info"><h3>${s.totalBookings}</h3><p>การจองทั้งหมด</p></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon orange"><span class="material-icons-round">pending_actions</span></div>
-      <div class="stat-info"><h3>${s.pendingBookings}</h3><p>รอดำเนินการ</p></div>
+      <div class="stat-info"><h3>${s.totalBookings}</h3><p>จำนวนการจอง</p></div>
     </div>
     <div class="stat-card">
       <div class="stat-icon green"><span class="material-icons-round">check_circle</span></div>
@@ -166,7 +162,11 @@ async function loadDashboard() {
     </div>
     <div class="stat-card">
       <div class="stat-icon purple"><span class="material-icons-round">upload_file</span></div>
-      <div class="stat-info"><h3>${s.totalFiles}</h3><p>ไฟล์งานทั้งหมด</p></div>
+      <div class="stat-info"><h3>${s.totalFiles}</h3><p>ส่งไฟล์</p></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon orange"><span class="material-icons-round">pending_actions</span></div>
+      <div class="stat-info"><h3>${s.pendingBookings}</h3><p>รอดำเนินการ</p></div>
     </div>
     <div class="stat-card">
       <div class="stat-icon teal"><span class="material-icons-round">rate_review</span></div>
