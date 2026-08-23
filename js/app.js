@@ -12,9 +12,8 @@ document.addEventListener('DOMContentLoaded', function () {
   setCurrentDate();
   initNavigation();
   setMinDate();
-  loadDashboard();
-  checkAdminSession();
   initSupervisionForm();
+  initAuth();
 });
 
 function setCurrentDate() {
@@ -30,11 +29,7 @@ function setMinDate() {
 }
 
 function checkAdminSession() {
-  const session = sessionStorage.getItem('adminSession');
-  if (session === 'true') {
-    isAdmin = true;
-    showAdminUI();
-  }
+  // replaced by initAuth()
 }
 
 function initNavigation() {
@@ -858,60 +853,95 @@ function showSupervisionDetail(index) {
   showModal('supervisionDetailModal');
 }
 
-// ==================== LOGIN ====================
+// ==================== AUTH ====================
 
 let currentUser = null;
 
-function showLoginModal() {
-  document.getElementById('loginUsername').value = '';
+function initAuth() {
+  const saved = sessionStorage.getItem('currentUser');
+  if (saved) {
+    try {
+      enterApp(JSON.parse(saved));
+      return;
+    } catch (e) { sessionStorage.removeItem('currentUser'); }
+  }
+  showLoginPage();
+}
+
+function showLoginPage() {
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
   document.getElementById('loginPassword').value = '';
   document.getElementById('loginError').style.display = 'none';
-  showModal('loginModal');
 }
 
-function closeLoginModal() {
-  closeModal('loginModal');
-}
+async function doLogin(e) {
+  if (e) e.preventDefault();
 
-async function doLogin() {
   const username = document.getElementById('loginUsername').value.trim();
   const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginSubmitBtn');
+
+  if (!username || !password) {
+    errEl.textContent = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  const originalBtn = btn.innerHTML;
+  btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> กำลังตรวจสอบ...';
+
   const result = await apiCall('login', { username, password });
 
+  btn.disabled = false;
+  btn.innerHTML = originalBtn;
+
   if (result.success) {
-    currentUser = result;
-    if (result.role === 'admin') {
-      isAdmin = true;
-      sessionStorage.setItem('adminSession', 'true');
-      showAdminUI();
-    }
     sessionStorage.setItem('currentUser', JSON.stringify(result));
-    closeLoginModal();
-    showToast('เข้าสู่ระบบสำเร็จ: ' + (result.displayName || username), 'success');
-    if (result.role === 'admin') navigateTo('admin');
+    enterApp(result);
+    showToast('ยินดีต้อนรับ ' + (result.displayName || username), 'success');
   } else {
-    const err = document.getElementById('loginError');
-    err.textContent = result.message || 'ข้อมูลเข้าสู่ระบบไม่ถูกต้อง';
-    err.style.display = 'block';
+    errEl.textContent = result.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+    errEl.style.display = 'block';
+    document.getElementById('loginPassword').value = '';
   }
+}
+
+function enterApp(user) {
+  currentUser = user;
+  isAdmin = user.role === 'admin';
+
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  const roleLabels = { admin: 'ผู้ดูแลระบบ', supervisor: 'หัวหน้ากลุ่มสาระ', teacher: 'ครูผู้สอน' };
+  document.getElementById('userBadgeName').textContent =
+    (user.displayName || user.username) + ' · ' + (roleLabels[user.role] || user.role);
+  document.getElementById('userBadge').style.display = 'flex';
+
+  const adminNav = document.querySelector('.admin-only');
+  if (isAdmin) {
+    sessionStorage.setItem('adminSession', 'true');
+    adminNav.style.display = 'flex';
+  } else {
+    sessionStorage.removeItem('adminSession');
+    adminNav.style.display = 'none';
+  }
+
+  loadDashboard();
 }
 
 function logout() {
   isAdmin = false;
   currentUser = null;
-  sessionStorage.removeItem('adminSession');
   sessionStorage.removeItem('currentUser');
-  document.getElementById('loginBtn').style.display = 'flex';
-  document.getElementById('userBadge').style.display = 'none';
+  sessionStorage.removeItem('adminSession');
   document.querySelector('.admin-only').style.display = 'none';
   navigateTo('dashboard');
+  showLoginPage();
   showToast('ออกจากระบบแล้ว', 'info');
-}
-
-function showAdminUI() {
-  document.getElementById('loginBtn').style.display = 'none';
-  document.getElementById('userBadge').style.display = 'flex';
-  document.querySelector('.admin-only').style.display = 'flex';
 }
 
 // ==================== ADMIN ====================

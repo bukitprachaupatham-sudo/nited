@@ -10,7 +10,30 @@
 </head>
 <body>
 
-<div id="app">
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo"><span class="material-icons-round">school</span></div>
+    <h1>ระบบนิเทศภายในโรงเรียน</h1>
+    <p class="login-school">โรงเรียนบูกิตประชาอุปถัมภ์</p>
+    <form onsubmit="doLogin(event)">
+      <div class="login-field">
+        <span class="material-icons-round">person</span>
+        <input type="text" id="loginUsername" placeholder="ชื่อผู้ใช้" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <span class="material-icons-round">lock</span>
+        <input type="password" id="loginPassword" placeholder="รหัสผ่าน" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-login-submit" id="loginSubmitBtn">
+        <span class="material-icons-round">login</span> เข้าสู่ระบบ
+      </button>
+      <p id="loginError" class="error-text" style="display:none;"></p>
+    </form>
+  </div>
+  <p class="login-footer">โรงเรียนบูกิตประชาอุปถัมภ์ · สพม.นราธิวาส</p>
+</div>
+
+<div id="app" style="display:none;">
   <nav id="sidebar">
     <div class="sidebar-header">
       <div class="school-logo">
@@ -37,13 +60,10 @@
       </li>
     </ul>
     <div class="sidebar-footer">
-      <button id="loginBtn" class="btn-login" onclick="showLoginModal()">
-        <span class="material-icons-round">login</span> เข้าสู่ระบบผู้ดูแล
-      </button>
       <div id="userBadge" class="user-badge" style="display:none;">
         <span class="material-icons-round">verified_user</span>
-        <span>ผู้ดูแลระบบ</span>
-        <button onclick="logout()" class="btn-logout" title="ออกจากระบบ">x</button>
+        <span id="userBadgeName">ผู้ใช้งาน</span>
+        <button onclick="logout()" class="btn-logout" title="ออกจากระบบ"><span class="material-icons-round">logout</span></button>
       </div>
     </div>
   </nav>
@@ -610,29 +630,6 @@
       <button onclick="saveUser()" class="btn btn-primary btn-full">
         <span class="material-icons-round">save</span> บันทึก
       </button>
-    </div>
-  </div>
-</div>
-
-<div id="loginModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3><span class="material-icons-round">lock</span> เข้าสู่ระบบผู้ดูแล</h3>
-      <button class="modal-close" onclick="closeLoginModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>ชื่อผู้ใช้</label>
-        <input type="text" id="loginUsername" placeholder="กรอกชื่อผู้ใช้">
-      </div>
-      <div class="form-group">
-        <label>รหัสผ่าน</label>
-        <input type="password" id="loginPassword" placeholder="กรอกรหัสผ่าน">
-      </div>
-      <button onclick="doLogin()" class="btn btn-primary btn-full">
-        <span class="material-icons-round">login</span> เข้าสู่ระบบ
-      </button>
-      <p id="loginError" class="error-text" style="display:none;"></p>
     </div>
   </div>
 </div>
