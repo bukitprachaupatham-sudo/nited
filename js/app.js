@@ -1,4 +1,4 @@
-const API_URL = 'https://script.google.com/macros/s/AKfycbwic4tklTKE7jDDoBwvpJDuS2lZPbTx0234vrKtPHzUTK43zC_yXbr9Lvbxf9uRE33b/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwwokjKng-BShN-LfL6Z_cpJ093yceohSoZlZihDlwS99_mj7z8YAy1mWh4wWlH8fY-/exec';
 
 let isAdmin = false;
 let calendarMonth = new Date().getMonth();
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setMinDate();
   loadDashboard();
   checkAdminSession();
+  initSupervisionForm();
 });
 
 function setCurrentDate() {
@@ -510,35 +511,242 @@ async function loadMyFiles() {
   container.innerHTML = html;
 }
 
-// ==================== SUPERVISION ====================
+// ==================== SUPERVISION (e-Inspection) ====================
+
+const teachingTechniques = [
+  'กระบวนการสืบค้น', 'การเรียนแบบค้นพบ', 'การเรียนแบบแก้ปัญหา',
+  'การเรียนแบบสร้างแผนผัง', 'การตั้งคำถาม', 'เทคนิคคู่คิด',
+  'การศึกษาเป็นรายบุคคล', 'การฝึกปฏิบัติ/ทดลอง', 'เกม',
+  'การอภิปราย', 'กิจกรรมกลุ่ม', 'บูรณาการกลุ่มสาระอื่น'
+];
+
+const evaluationCriteria = [
+  {
+    category: 'ด้านการเตรียมการสอน',
+    items: [
+      '1. จัดทำแผนการเรียนรู้ครบองค์ประกอบ',
+      '2. จัดเตรียมวัสดุ-อุปกรณ์ สื่อ นวัตกรรม กิจกรรมตามแผนฯ'
+    ]
+  },
+  {
+    category: 'ด้านการจัดกิจกรรมการเรียนรู้',
+    items: [
+      '3. มีวิธีการนำเข้าสู่บทเรียนที่น่าสนใจ แจ้งวัตถุประสงค์การเรียนรู้',
+      '4. ใช้เทคนิคการสอนที่หลากหลาย เน้นผู้เรียนเป็นสำคัญ',
+      '5. จัดกิจกรรมที่ส่งเสริมให้ค้นคว้าหาคำตอบด้วยตนเอง',
+      '6. จัดกิจกรรมที่ตอบสนองความแตกต่างระหว่างบุคคล',
+      '7. จัดกิจกรรมที่เน้นกระบวนการคิด (วิเคราะห์ สังเคราะห์ สร้างสรรค์)',
+      '8. จัดกิจกรรมให้ผู้เรียนมีส่วนร่วมและแสดงความคิดเห็นเสรี',
+      '9. มีการสอดแทรกคุณธรรม จริยธรรมและคุณลักษณะอันพึงประสงค์',
+      '10. มีการเสริมแรงเมื่อนักเรียนปฏิบัติหรือตอบถูกต้อง',
+      '11. มีการสรุปประเด็น สาระ เนื้อหาในกิจกรรมการเรียนรู้',
+      '12. มอบหมายงานเหมาะสมตามศักยภาพผู้เรียนและเอาใจใส่ดูแล',
+      '13. ใช้เวลาสอนเหมาะสมกับเวลาที่กำหนด'
+    ]
+  },
+  {
+    category: 'ด้านสื่อ นวัตกรรม แหล่งเรียนรู้',
+    items: [
+      '14. ใช้สื่อที่เหมาะสมกับกิจกรรมและศักยภาพของผู้เรียน',
+      '15. ใช้สื่อ แหล่งการเรียนรู้อย่างหลากหลาย'
+    ]
+  },
+  {
+    category: 'ด้านการวัดและประเมินผล',
+    items: [
+      '16. สอดคล้องและครอบคลุมจุดประสงค์',
+      '17. ประเมินผลอย่างหลากหลายและครบทั้ง 3 ด้าน (K.P.A.)'
+    ]
+  },
+  {
+    category: 'ด้านสภาพทั่วไป',
+    items: [
+      '18. การตรงต่อเวลา',
+      '19. การควบคุมความเป็นระเบียบในชั้นเรียน',
+      '20. การจัดบรรยากาศในชั้นเรียน (การจัดห้อง, ความสะอาด)'
+    ]
+  },
+  {
+    category: 'ด้านบุคลิกภาพ',
+    items: [
+      '21. แต่งกายสุภาพ สะอาดเรียบร้อย เหมาะสมกับกาลเทศะ',
+      '22. ใช้ถ้อยคำสุภาพ ถูกต้อง ระดับเสียงดังชัดเจน',
+      '23. ยิ้มแย้มแจ่มใส และควบคุมอารมณ์ในระหว่างสอนได้ดี',
+      '24. เคลื่อนไหวและแสดงท่าทางในการสอนอย่างมีจุดหมาย',
+      '25. แสดงความรัก ความเมตตา กรุณา เอื้ออาทรต่อศิษย์'
+    ]
+  }
+];
+
+function initSupervisionForm() {
+  const techContainer = document.getElementById('techniquesContainer');
+  if (!techContainer) return;
+
+  techContainer.innerHTML = teachingTechniques.map(t =>
+    `<label class="tech-item"><input type="checkbox" name="techniques" value="${t}">${t}</label>`
+  ).join('');
+
+  const evalBody = document.getElementById('evaluationBody');
+  let html = '';
+  let q = 1;
+
+  evaluationCriteria.forEach(group => {
+    html += `<tr class="eval-category-row"><td colspan="6" class="eval-category">${group.category}</td></tr>`;
+    group.items.forEach(itemText => {
+      let radioCells = '';
+      for (let score = 0; score <= 4; score++) {
+        radioCells += `<td class="score-cell"><input type="radio" name="q${q}" value="${score}" onchange="calculateScore()"></td>`;
+      }
+      html += `<tr><td class="eval-item">${itemText}</td>${radioCells}</tr>`;
+      q++;
+    });
+  });
+
+  evalBody.innerHTML = html;
+}
+
+function calculateScore() {
+  let total = 0;
+  let answeredCount = 0;
+
+  for (let i = 1; i <= 25; i++) {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if (selected) {
+      total += parseInt(selected.value);
+      answeredCount++;
+    }
+  }
+
+  document.getElementById('displayScore').textContent = total;
+  document.getElementById('displayPercent').textContent = total.toFixed(1);
+
+  const levelEl = document.getElementById('displayLevel');
+  if (answeredCount === 0) {
+    levelEl.textContent = '-';
+    levelEl.className = 'score-level';
+    return;
+  }
+
+  const q = getQualityLevel(total);
+  levelEl.textContent = answeredCount < 25 ? `${q.level} (${answeredCount}/25 ข้อ)` : q.level;
+  levelEl.className = 'score-level ' + q.cls;
+}
+
+function getQualityLevel(percent) {
+  if (percent < 60) return { level: 'ต้องปรับปรุง', cls: 'lv-red' };
+  if (percent < 70) return { level: 'ยอมรับได้ (ควรปรับปรุง)', cls: 'lv-orange' };
+  if (percent < 80) return { level: 'ค่อนข้างดี', cls: 'lv-yellow' };
+  if (percent < 90) return { level: 'ดี', cls: 'lv-green' };
+  return { level: 'ดีมาก เป็นตัวอย่างที่ดี', cls: 'lv-green' };
+}
+
+function getQualityBadge(level) {
+  const map = {
+    'ต้องปรับปรุง': 'badge-rejected',
+    'ยอมรับได้ (ควรปรับปรุง)': 'badge-pending',
+    'ค่อนข้างดี': 'badge-review',
+    'ดี': 'badge-good',
+    'ดีมาก เป็นตัวอย่างที่ดี': 'badge-excellent'
+  };
+  return `<span class="badge ${map[level] || ''}">${level || '-'}</span>`;
+}
 
 async function submitSupervision(e) {
   e.preventDefault();
 
-  const data = {
-    teacherName: document.getElementById('supTeacher').value.trim(),
-    supervisionDate: document.getElementById('supDate').value,
-    department: document.getElementById('supDepartment').value,
-    subject: document.getElementById('supSubject').value.trim(),
-    strengths: document.getElementById('supStrengths').value.trim(),
-    improvements: document.getElementById('supImprovements').value.trim(),
-    suggestions: document.getElementById('supSuggestions').value.trim(),
-    qualityLevel: document.getElementById('supQuality').value
-  };
+  const btn = document.getElementById('submitSupBtn');
+  const originalBtn = btn.innerHTML;
+  btn.disabled = true;
 
-  if (!data.teacherName || !data.supervisionDate || !data.department || !data.strengths || !data.improvements || !data.qualityLevel) {
-    showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
-    return;
+  const scores = [];
+  for (let i = 1; i <= 25; i++) {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if (!selected) {
+      showToast('กรุณาให้คะแนนครบทั้ง 25 ข้อก่อนบันทึก', 'warning');
+      btn.disabled = false;
+      document.querySelector('input[name="q' + i + '"]').closest('tr').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    scores.push(parseInt(selected.value));
   }
 
+  const selectedTechs = Array.from(document.querySelectorAll('input[name="techniques"]:checked')).map(cb => cb.value);
+  const otherTech = document.getElementById('otherTechnique').value.trim();
+  if (otherTech) selectedTechs.push(otherTech);
+
+  const totalScore = scores.reduce((a, b) => a + b, 0);
+  const quality = getQualityLevel(totalScore);
+
+  const data = {
+    supervisionType: document.querySelector('input[name="supType"]:checked').value,
+    supervisorName: document.getElementById('supervisorName').value.trim(),
+    teacherName: document.getElementById('supTeacher').value.trim(),
+    department: document.getElementById('supDepartment').value,
+    gradeLevel: document.getElementById('supGradeLevel').value.trim(),
+    period: document.getElementById('supPeriod').value,
+    teachingDate: document.getElementById('supDate').value,
+    topic: document.getElementById('supTopic').value.trim(),
+    techniques: selectedTechs.join(', '),
+    scores: scores,
+    totalScore: totalScore,
+    percent: Math.round(totalScore * 10) / 10,
+    qualityLevel: quality.level,
+    strengths: document.getElementById('supStrengths').value.trim(),
+    improvements: document.getElementById('supImprovements').value.trim(),
+    suggestions: document.getElementById('supSuggestions').value.trim()
+  };
+
+  const fileInput = document.getElementById('evidenceFile');
+  if (fileInput.files[0]) {
+    const file = fileInput.files[0];
+    if (file.size > 50 * 1024 * 1024) {
+      showToast('ขนาดไฟล์เกิน 50 MB', 'warning');
+      btn.disabled = false;
+      return;
+    }
+    btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> กำลังอัปโหลดไฟล์...';
+    try {
+      const base64 = await fileToBase64(file);
+      const uploadResult = await apiCall('uploadFileToDrive', {
+        base64Data: base64.split(',')[1],
+        fileName: file.name,
+        fileType: 'ภาพกิจกรรม'
+      });
+      if (uploadResult.success) {
+        data.evidenceUrl = uploadResult.fileUrl;
+      } else {
+        showToast('อัปโหลดไฟล์ไม่สำเร็จ: ' + uploadResult.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = originalBtn;
+        return;
+      }
+    } catch (err) {
+      showToast('เกิดข้อผิดพลาดในการอัปโหลด: ' + err.message, 'error');
+      btn.disabled = false;
+      btn.innerHTML = originalBtn;
+      return;
+    }
+  }
+
+  btn.innerHTML = '<span class="material-icons-round">hourglass_top</span> กำลังบันทึก...';
   const result = await apiCall('addSupervision', data);
+
+  btn.disabled = false;
+  btn.innerHTML = originalBtn;
+
   if (result.success) {
-    showToast('บันทึกผลการประเมินสำเร็จ!', 'success');
-    document.getElementById('supervisionForm').reset();
+    showToast('บันทึกผลการนิเทศสำเร็จ! (คะแนน ' + totalScore + '/100)', 'success');
+    resetSupervisionForm();
     loadRecentSupervisions();
   } else {
     showToast(result.message || 'ไม่สามารถบันทึกได้', 'error');
   }
+}
+
+function resetSupervisionForm() {
+  document.getElementById('supervisionForm').reset();
+  calculateScore();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function loadRecentSupervisions() {
@@ -552,14 +760,16 @@ async function loadRecentSupervisions() {
 
   allSupervisions = result.data;
 
-  let html = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>วันที่นิเทศ</th><th>ครู</th><th>กลุ่มสาระ</th><th>ระดับ</th><th></th></tr></thead><tbody>';
+  let html = '<div class="table-wrapper"><table><thead><tr><th>#</th><th>วันที่สอน</th><th>ครูผู้สอน</th><th>กลุ่มสาระ</th><th>เรื่องที่สอน</th><th>คะแนน</th><th>ระดับคุณภาพ</th><th></th></tr></thead><tbody>';
   result.data.forEach((s, i) => {
     html += `<tr>
       <td>${i + 1}</td>
-      <td>${formatDate(s.supervisionDate)}</td>
+      <td>${formatDate(s.teachingDate)}</td>
       <td>${s.teacherName}</td>
       <td>${getDeptBadge(s.department)}</td>
-      <td>${getStatusBadge(s.qualityLevel)}</td>
+      <td>${s.topic || '-'}</td>
+      <td><strong>${s.totalScore}</strong>/100</td>
+      <td>${getQualityBadge(s.qualityLevel)}</td>
       <td><button class="btn btn-sm btn-primary" onclick="showSupervisionDetail(${i})"><span class="material-icons-round">visibility</span></button></td>
     </tr>`;
   });
@@ -571,16 +781,26 @@ function showSupervisionDetail(index) {
   const s = allSupervisions[index];
   if (!s) return;
 
+  const evidenceLink = s.evidenceUrl
+    ? `<a href="${s.evidenceUrl}" target="_blank" style="color:var(--primary);">ดูไฟล์หลักฐาน</a>`
+    : '-';
+
   document.getElementById('supervisionDetailBody').innerHTML = `
     <div class="detail-grid">
+      <div class="detail-item"><div class="label">ประเภทการนิเทศ</div><div class="value">${s.supervisionType || '-'}</div></div>
+      <div class="detail-item"><div class="label">ผู้นิเทศ</div><div class="value">${s.supervisorName || '-'}</div></div>
       <div class="detail-item"><div class="label">ครูผู้สอน</div><div class="value">${s.teacherName}</div></div>
-      <div class="detail-item"><div class="label">วันที่นิเทศ</div><div class="value">${formatDate(s.supervisionDate)}</div></div>
       <div class="detail-item"><div class="label">กลุ่มสาระ</div><div class="value">${s.department}</div></div>
-      <div class="detail-item"><div class="label">รายวิชา</div><div class="value">${s.subject || '-'}</div></div>
-      <div class="detail-item full"><div class="label">จุดเด่น</div><div class="value">${s.strengths}</div></div>
-      <div class="detail-item full"><div class="label">จุดพัฒนา</div><div class="value">${s.improvements}</div></div>
-      <div class="detail-item full"><div class="label">ข้อเสนอแนะ</div><div class="value">${s.suggestions || '-'}</div></div>
-      <div class="detail-item"><div class="label">ระดับคุณภาพ</div><div class="value">${getStatusBadge(s.qualityLevel)}</div></div>
+      <div class="detail-item"><div class="label">ชั้น / คาบที่</div><div class="value">${s.gradeLevel || '-'} / ${s.period ? 'คาบที่ ' + s.period : '-'}</div></div>
+      <div class="detail-item"><div class="label">วันที่สอน</div><div class="value">${formatDate(s.teachingDate)}</div></div>
+      <div class="detail-item full"><div class="label">เรื่องที่สอน</div><div class="value">${s.topic || '-'}</div></div>
+      <div class="detail-item full"><div class="label">เทคนิคการสอนที่ใช้</div><div class="value">${s.techniques || '-'}</div></div>
+      <div class="detail-item"><div class="label">คะแนนรวม</div><div class="value"><strong>${s.totalScore}</strong>/100 (${Number(s.percent).toFixed(1)}%)</div></div>
+      <div class="detail-item"><div class="label">ระดับคุณภาพ</div><div class="value">${getQualityBadge(s.qualityLevel)}</div></div>
+      <div class="detail-item"><div class="label">ไฟล์หลักฐาน</div><div class="value">${evidenceLink}</div></div>
+      <div class="detail-item full"><div class="label">จุดเด่น / คำชมเชย</div><div class="value">${s.strengths || '-'}</div></div>
+      <div class="detail-item full"><div class="label">จุดที่ควรพัฒนา</div><div class="value">${s.improvements || '-'}</div></div>
+      <div class="detail-item full"><div class="label">ข้อเสนอแนะอื่นๆ</div><div class="value">${s.suggestions || '-'}</div></div>
     </div>
   `;
   showModal('supervisionDetailModal');
@@ -997,10 +1217,12 @@ async function generateIndividualReport(container) {
   sups.forEach((s, i) => {
     html += `
       <div style="padding:0.5rem;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:0.5rem;">
-        <div class="report-item"><span class="label">วันที่</span><span class="value">${formatDate(s.supervisionDate)}</span></div>
-        <div class="report-item"><span class="label">ระดับ</span><span class="value">${getStatusBadge(s.qualityLevel)}</span></div>
-        <div class="report-item"><span class="label">จุดเด่น</span><span class="value">${s.strengths}</span></div>
-        <div class="report-item"><span class="label">จุดพัฒนา</span><span class="value">${s.improvements}</span></div>
+        <div class="report-item"><span class="label">วันที่สอน</span><span class="value">${formatDate(s.teachingDate)}</span></div>
+        <div class="report-item"><span class="label">เรื่องที่สอน</span><span class="value">${s.topic || '-'}</span></div>
+        <div class="report-item"><span class="label">คะแนน</span><span class="value">${s.totalScore}/100</span></div>
+        <div class="report-item"><span class="label">ระดับ</span><span class="value">${getQualityBadge(s.qualityLevel)}</span></div>
+        <div class="report-item"><span class="label">จุดเด่น</span><span class="value">${s.strengths || '-'}</span></div>
+        <div class="report-item"><span class="label">จุดพัฒนา</span><span class="value">${s.improvements || '-'}</span></div>
       </div>`;
   });
 

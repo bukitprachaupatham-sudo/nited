@@ -3,8 +3,15 @@ const DRIVE_FOLDER_ID = '1KRh9lgDCTCTkiuRxioVJn1hVGqhNf2bJ';
 const ADMIN_PASSWORD = 'bukit2569';
 
 function doGet(e) {
-  const template = HtmlService.createTemplateFromFile('index');
-  return template.evaluate()
+  const html = HtmlService.createHtmlOutput(
+    '<div style="font-family:sans-serif;text-align:center;padding:4rem;">' +
+    '<h2>ระบบนิเทศภายในโรงเรียนบูกิตประชาอุปถัมภ์</h2>' +
+    '<p>ย้ายไปใช้งานที่หน้าเว็บหลักแล้ว</p>' +
+    '<p style="margin-top:1rem;"><a href="https://bukitprachaupatham-sudo.github.io/nited/" ' +
+    'target="_blank" style="font-size:1.1rem;color:#1a73e8;">คลิกเพื่อเปิดระบบนิเทศฯ</a></p>' +
+    '</div>'
+  );
+  return html
     .setTitle('ระบบนิเทศภายในโรงเรียนบูกิตประชาอุปถัมภ์')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -50,6 +57,14 @@ function jsonResponse(data) {
 function getSheet(name) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = ss.getSheetByName(name);
+
+  if (name === 'Supervision' && sheet &&
+      String(sheet.getRange(1, 2).getValue()) !== 'Supervision Type') {
+    const suffix = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyyMMdd_HHmmss');
+    sheet.setName('Supervision_Old_' + suffix);
+    sheet = null;
+  }
+
   if (!sheet) {
     if (name === 'Booking') {
       sheet = ss.insertSheet('Booking');
@@ -68,13 +83,7 @@ function getSheet(name) {
       sheet.getRange('A1:I1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
       sheet.setFrozenRows(1);
     } else if (name === 'Supervision') {
-      sheet = ss.insertSheet('Supervision');
-      sheet.appendRow([
-        'Timestamp', 'Teacher Name', 'Supervision Date', 'Department',
-        'Subject', 'Strengths', 'Improvements', 'Suggestions', 'Quality Level', 'Score', 'Booking ID'
-      ]);
-      sheet.getRange('A1:K1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
-      sheet.setFrozenRows(1);
+      sheet = createSupervisionSheet(ss);
     } else if (name === 'Users') {
       sheet = ss.insertSheet('Users');
       sheet.appendRow([
@@ -88,6 +97,19 @@ function getSheet(name) {
       ]);
     }
   }
+  return sheet;
+}
+
+function createSupervisionSheet(ss) {
+  const sheet = ss.insertSheet('Supervision');
+  sheet.appendRow([
+    'Timestamp', 'Supervision Type', 'Supervisor Name', 'Teacher Name', 'Department',
+    'Grade Level', 'Period', 'Teaching Date', 'Topic', 'Techniques',
+    'Scores', 'Total Score', 'Percent', 'Quality Level',
+    'Strengths', 'Improvements', 'Suggestions', 'Evidence URL'
+  ]);
+  sheet.getRange('A1:R1').setFontWeight('bold').setBackground('#1a73e8').setFontColor('#ffffff');
+  sheet.setFrozenRows(1);
   return sheet;
 }
 
@@ -451,11 +473,16 @@ function addSupervision(data) {
   try {
     const sheet = getSheet('Supervision');
     const timestamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd HH:mm:ss');
+    const scoresStr = Array.isArray(data.scores) ? data.scores.join(',') : String(data.scores || '');
 
     sheet.appendRow([
-      timestamp, data.teacherName, data.supervisionDate, data.department,
-      data.subject, data.strengths, data.improvements, data.suggestions,
-      data.qualityLevel, data.score || '', data.bookingId || ''
+      timestamp, data.supervisionType || '', data.supervisorName || '', data.teacherName,
+      data.department, data.gradeLevel || '', data.period || '', data.teachingDate,
+      data.topic || '', data.techniques || '', scoresStr,
+      data.totalScore || 0, data.percent !== undefined ? data.percent : (data.totalScore || 0),
+      data.qualityLevel || '',
+      data.strengths || '', data.improvements || '', data.suggestions || '',
+      data.evidenceUrl || ''
     ]);
 
     return { success: true, message: 'บันทึกผลการประเมินสำเร็จ' };
@@ -474,22 +501,29 @@ function getSupervisions(data) {
       const sup = {
         id: i + 1,
         timestamp: rows[i][0],
-        teacherName: rows[i][1],
-        supervisionDate: rows[i][2],
-        department: rows[i][3],
-        subject: rows[i][4],
-        strengths: rows[i][5],
-        improvements: rows[i][6],
-        suggestions: rows[i][7],
-        qualityLevel: rows[i][8],
-        score: rows[i][9],
-        bookingId: rows[i][10]
+        supervisionType: rows[i][1],
+        supervisorName: rows[i][2],
+        teacherName: rows[i][3],
+        department: rows[i][4],
+        gradeLevel: rows[i][5],
+        period: rows[i][6],
+        teachingDate: rows[i][7],
+        topic: rows[i][8],
+        techniques: rows[i][9],
+        scores: rows[i][10],
+        totalScore: Number(rows[i][11]) || 0,
+        percent: Number(rows[i][12]) || 0,
+        qualityLevel: rows[i][13],
+        strengths: rows[i][14],
+        improvements: rows[i][15],
+        suggestions: rows[i][16],
+        evidenceUrl: rows[i][17]
       };
 
       if (data) {
         if (data.teacherName && sup.teacherName !== data.teacherName) continue;
         if (data.department && sup.department !== data.department) continue;
-        if (data.month && !sup.supervisionDate.startsWith(data.month)) continue;
+        if (data.month && !String(sup.teachingDate).startsWith(data.month)) continue;
       }
 
       supervisions.push(sup);
@@ -617,7 +651,7 @@ function getDashboard() {
 
     for (let i = 1; i < supRows.length; i++) {
       stats.totalSupervisions++;
-      if (String(supRows[i][2]).startsWith(thisMonth)) stats.thisMonthSupervisions++;
+      if (String(supRows[i][7]).startsWith(thisMonth)) stats.thisMonthSupervisions++;
     }
 
     stats.calendarEvents.reverse();
@@ -632,7 +666,7 @@ function getDashboard() {
 
 function setupSheets() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheets = ['Booking', 'Files', 'Supervision'];
+  const sheets = ['Booking', 'Files', 'Supervision', 'Users'];
   sheets.forEach(name => getSheet(name));
 
   const existingSheets = ss.getSheets().map(s => s.getName());

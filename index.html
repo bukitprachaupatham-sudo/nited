@@ -275,70 +275,145 @@
 
       <section id="page-supervision" class="page">
         <div class="page-header">
-          <h2>ประเมินผลการนิเทศ</h2>
+          <h2>แบบบันทึกการนิเทศการสอน (e-Inspection)</h2>
         </div>
-        <div class="form-container">
-          <form id="supervisionForm" onsubmit="submitSupervision(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label>ชื่อ-นามสกุลครูผู้สอน <span class="required">*</span></label>
-                <input type="text" id="supTeacher" placeholder="กรอกชื่อ-นามสกุล" required>
-              </div>
-              <div class="form-group">
-                <label>วันที่นิเทศ <span class="required">*</span></label>
-                <input type="date" id="supDate" required>
-              </div>
-              <div class="form-group">
-                <label>กลุ่มสาระ <span class="required">*</span></label>
-                <select id="supDepartment" required>
-                  <option value="">-- เลือกกลุ่มสาระ --</option>
-                  <option value="ภาษาไทย">ภาษาไทย</option>
-                  <option value="คณิตศาสตร์">คณิตศาสตร์</option>
-                  <option value="วิทยาศาสตร์">วิทยาศาสตร์</option>
-                  <option value="สังคมศึกษา">สังคมศึกษา</option>
-                  <option value="สุขศึกษา">สุขศึกษา</option>
-                  <option value="ศิลปะ">ศิลปะ</option>
-                  <option value="การงานอาชีพ">การงานอาชีพ</option>
-                  <option value="ภาษาต่างประเทศ">ภาษาต่างประเทศ</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>รายวิชา</label>
-                <input type="text" id="supSubject" placeholder="กรอกรายวิชา">
-              </div>
-              <div class="form-group full-width">
-                <label>จุดเด่น <span class="required">*</span></label>
-                <textarea id="supStrengths" rows="3" placeholder="บันทึกจุดเด่นของการจัดการเรียนรู้..." required></textarea>
-              </div>
-              <div class="form-group full-width">
-                <label>จุดพัฒนา <span class="required">*</span></label>
-                <textarea id="supImprovements" rows="3" placeholder="บันทึกจุดที่ต้องพัฒนา..." required></textarea>
-              </div>
-              <div class="form-group full-width">
-                <label>ข้อเสนอแนะ</label>
-                <textarea id="supSuggestions" rows="3" placeholder="ข้อเสนอแนะเพิ่มเติม..."></textarea>
-              </div>
-              <div class="form-group">
-                <label>ระดับคุณภาพ <span class="required">*</span></label>
-                <select id="supQuality" required>
-                  <option value="">-- เลือกระดับ --</option>
-                  <option value="ดีมาก">ดีมาก</option>
-                  <option value="ดี">ดี</option>
-                  <option value="พอใช้">พอใช้</option>
-                  <option value="ปรับปรุง">ปรับปรุง</option>
-                </select>
+
+        <form id="supervisionForm" onsubmit="submitSupervision(event)">
+          <div class="card form-section-card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">info</span> 1. ข้อมูลการนิเทศ</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>ประเภทการนิเทศ <span class="required">*</span></label>
+                  <div class="radio-row">
+                    <label class="radio-option">
+                      <input type="radio" name="supType" value="ตามตาราง (Schedule)" checked>
+                      ตามตาราง (Schedule)
+                    </label>
+                    <label class="radio-option">
+                      <input type="radio" name="supType" value="ไม่ได้นัดหมาย (Impromptu)">
+                      ไม่ได้นัดหมาย (Impromptu)
+                    </label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>ชื่อผู้นิเทศ <span class="required">*</span></label>
+                  <input type="text" id="supervisorName" placeholder="ระบุชื่อผู้นิเทศ" required>
+                </div>
+                <div class="form-group">
+                  <label>ชื่อผู้รับการนิเทศ (ผู้สอน) <span class="required">*</span></label>
+                  <input type="text" id="supTeacher" placeholder="ระบุชื่อครูผู้สอน" required>
+                </div>
+                <div class="form-group">
+                  <label>กลุ่มสาระการเรียนรู้ <span class="required">*</span></label>
+                  <select id="supDepartment" required>
+                    <option value="">-- เลือกกลุ่มสาระฯ --</option>
+                    <option value="คณิตศาสตร์">คณิตศาสตร์</option>
+                    <option value="วิทยาศาสตร์และเทคโนโลยี">วิทยาศาสตร์และเทคโนโลยี</option>
+                    <option value="ภาษาไทย">ภาษาไทย</option>
+                    <option value="สังคมศึกษาฯ">สังคมศึกษาฯ</option>
+                    <option value="ภาษาต่างประเทศ">ภาษาต่างประเทศ</option>
+                    <option value="สุขศึกษาและพลศึกษา">สุขศึกษาและพลศึกษา</option>
+                    <option value="ศิลปะ">ศิลปะ</option>
+                    <option value="การงานอาชีพ">การงานอาชีพ</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>ระดับชั้น / คาบที่ <span class="required">*</span></label>
+                  <div class="inline-fields">
+                    <input type="text" id="supGradeLevel" placeholder="เช่น ม.4/1" required>
+                    <input type="number" id="supPeriod" min="1" max="10" placeholder="คาบที่" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>วันที่สอน <span class="required">*</span></label>
+                  <input type="date" id="supDate" required>
+                </div>
+                <div class="form-group full-width">
+                  <label>เรื่องที่สอน <span class="required">*</span></label>
+                  <input type="text" id="supTopic" placeholder="ระบุเรื่องที่ใช้จัดการเรียนการสอน" required>
+                </div>
               </div>
             </div>
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary">
-                <span class="material-icons-round">save</span> บันทึกผลการประเมิน
-              </button>
-              <button type="reset" class="btn btn-secondary">
-                <span class="material-icons-round">refresh</span> ล้างข้อมูล
-              </button>
+          </div>
+
+          <div class="card form-section-card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">psychology</span> 2. เทคนิคการสอนที่ใช้ (เลือกได้มากกว่า 1)</h3>
             </div>
-          </form>
-        </div>
+            <div class="card-body tech-body">
+              <div class="tech-grid" id="techniquesContainer"></div>
+              <input type="text" id="otherTechnique" placeholder="เทคนิคอื่นๆ (โปรดระบุ)">
+            </div>
+          </div>
+
+          <div class="card form-section-card">
+            <div class="card-header eval-header">
+              <h3><span class="material-icons-round">fact_check</span> 3. รายการประเมิน</h3>
+              <span class="eval-legend">0=ไม่ปฏิบัติ | 1=ควรปรับปรุง | 2=พอใช้ | 3=ดี | 4=ดีมาก</span>
+            </div>
+            <div class="card-body">
+              <div class="table-wrapper">
+                <table class="eval-table">
+                  <thead>
+                    <tr>
+                      <th style="width:55%;">รายการประเมิน</th>
+                      <th>0</th><th>1</th><th>2</th><th>3</th><th>4</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evaluationBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card form-section-card">
+            <div class="card-header">
+              <h3><span class="material-icons-round">edit_note</span> 4. สรุปผลและข้อเสนอแนะ</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>จุดเด่น / คำชมเชย</label>
+                <textarea id="supStrengths" rows="2" placeholder="บันทึกจุดเด่นของการจัดการเรียนรู้..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>จุดที่ควรพัฒนา</label>
+                <textarea id="supImprovements" rows="2" placeholder="บันทึกจุดที่ต้องพัฒนา..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>ข้อเสนอแนะอื่นๆ</label>
+                <textarea id="supSuggestions" rows="2" placeholder="ข้อเสนอแนะเพิ่มเติม..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>อัปโหลดภาพกิจกรรม / แผนการสอน (PDF/JPG)</label>
+                <input type="file" id="evidenceFile" accept=".pdf,.jpg,.jpeg,.png">
+                <small class="field-hint">ขนาดไม่เกิน 50 MB — ไฟล์จะถูกเก็บใน Google Drive ของโรงเรียน</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="score-bar">
+            <div class="score-stats">
+              <div class="score-box">
+                <div class="score-lbl">คะแนนรวม</div>
+                <div class="score-val"><span id="displayScore">0</span><small>/100</small></div>
+              </div>
+              <div class="score-box">
+                <div class="score-lbl">คิดเป็นร้อยละ</div>
+                <div class="score-val accent"><span id="displayPercent">0.0</span>%</div>
+              </div>
+              <div class="score-box">
+                <div class="score-lbl">ระดับคุณภาพ</div>
+                <div class="score-level" id="displayLevel">-</div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-score" id="submitSupBtn">
+              <span class="material-icons-round">save</span> บันทึกผลการนิเทศ
+            </button>
+          </div>
+        </form>
 
         <div class="card" style="margin-top:2rem;">
           <div class="card-header">
